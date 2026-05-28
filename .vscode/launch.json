@@ -1,0 +1,43 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "QuickTasks (Pixel 9)",
+      "request": "launch",
+      "type": "dart",
+      "preLaunchTask": "Start Pixel 9 Emulator",
+      "deviceId": "android"
+    },
+    {
+      "name": "QuickTasks (Pixel 9 Pro Fold)",
+      "request": "launch",
+      "type": "dart",
+      "preLaunchTask": "Start Pixel 9 Pro Fold Emulator",
+      "deviceId": "android"
+    },
+    {
+      "name": "QuickTasks (iOS Simulator)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "apple_ios_simulator"
+    },
+    {
+      "name": "QuickTasks (macOS)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "macos"
+    },
+    {
+      "name": "QuickTasks (Chrome)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "chrome"
+    },
+    {
+      "name": "QuickTasks (All Connected)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "all"
+    }
+  ]
+}
