@@ -346,8 +346,8 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
       return b.endAt!.compareTo(a.endAt!);
     });
 
-    // 3. Stacking row end times
-    final rowEndTimes = <DateTime>[];
+    // 3. Stacking row end coordinates
+    final rowEndCoordinates = <double>[];
 
     for (final item in timelineItems) {
       final start = item.startAt!;
@@ -368,23 +368,24 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
       final left = _getCoordinateOfHour(startDec, hourWidths);
       final right = _getCoordinateOfHour(endDec, hourWidths);
 
-      // Enforce minimum width of 80dp for readability/tap targets
-      final width = max(right - left, 80.0);
+      // Enforce minimum width of 140dp for readability/tap targets
+      final width = max(right - left, 140.0);
+      final visualRight = left + width;
 
       int targetRowIndex = -1;
-      for (int i = 0; i < rowEndTimes.length; i++) {
-        if (start.isAtSameMomentAs(rowEndTimes[i]) ||
-            start.isAfter(rowEndTimes[i])) {
+      for (int i = 0; i < rowEndCoordinates.length; i++) {
+        // Add a small 4dp padding buffer to prevent cards from touching each other in the same row
+        if (left >= rowEndCoordinates[i] + 4.0) {
           targetRowIndex = i;
           break;
         }
       }
 
       if (targetRowIndex == -1) {
-        targetRowIndex = rowEndTimes.length;
-        rowEndTimes.add(end);
+        targetRowIndex = rowEndCoordinates.length;
+        rowEndCoordinates.add(visualRight);
       } else {
-        rowEndTimes[targetRowIndex] = end;
+        rowEndCoordinates[targetRowIndex] = visualRight;
       }
 
       list.add(
@@ -749,7 +750,7 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                                     );
                                     final highlightWidth = max(
                                       highlightRight - highlightLeft,
-                                      80.0,
+                                      140.0,
                                     );
 
                                     return Positioned(
