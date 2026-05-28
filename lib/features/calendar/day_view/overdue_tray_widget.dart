@@ -75,7 +75,7 @@ class _OverdueTrayWidgetState extends ConsumerState<OverdueTrayWidget> {
               ),
               const SizedBox(height: 8),
               ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 160),
+                constraints: const BoxConstraints(maxHeight: 192),
                 child: ListView.separated(
                   shrinkWrap: true,
                   physics: const AlwaysScrollableScrollPhysics(),
