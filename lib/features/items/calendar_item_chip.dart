@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:quicktasks/domain/models/calendar_item.dart';
 
 class CalendarItemChip extends StatelessWidget {
@@ -45,7 +46,10 @@ class CalendarItemChip extends StatelessWidget {
       height: 32,
       child: Checkbox(
         value: item.isComplete,
-        onChanged: (_) => onComplete?.call(),
+        onChanged: (_) {
+          HapticFeedback.lightImpact();
+          onComplete?.call();
+        },
       ),
     );
 

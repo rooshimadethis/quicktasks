@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:quicktasks/domain/models/calendar_item.dart';
@@ -307,12 +308,14 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
   }
 
   void _changeDay(int days) {
+    HapticFeedback.selectionClick();
     setState(() {
       _selectedDay = _selectedDay.add(Duration(days: days));
     });
   }
 
   void _goToToday() {
+    HapticFeedback.selectionClick();
     final now = DateTime.now();
     setState(() {
       _selectedDay = DateTime(now.year, now.month, now.day);
@@ -601,6 +604,7 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                     },
                     onWillAcceptWithDetails: (details) => true,
                     onAcceptWithDetails: (details) async {
+                      HapticFeedback.heavyImpact();
                       _stopAutoScroll();
                       _draggedSlotTimeNotifier.value = null;
                       _draggedItemNotifier.value = null;
@@ -811,6 +815,9 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                                     data: pi.item,
                                     maxSimultaneousDrags: 1,
                                     delay: const Duration(milliseconds: 300),
+                                    onDragStarted: () {
+                                      HapticFeedback.mediumImpact();
+                                    },
                                     feedback: Material(
                                       color: Colors.transparent,
                                       child: SizedBox(

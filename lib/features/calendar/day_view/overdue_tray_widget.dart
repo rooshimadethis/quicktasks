@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quicktasks/domain/models/calendar_item.dart';
 import 'package:quicktasks/domain/repositories/calendar_item_repository.dart';
@@ -89,6 +90,9 @@ class _OverdueTrayWidgetState extends ConsumerState<OverdueTrayWidget> {
                       data: item,
                       maxSimultaneousDrags: 1,
                       delay: const Duration(milliseconds: 300), // ~300ms hold threshold
+                      onDragStarted: () {
+                        HapticFeedback.mediumImpact();
+                      },
                       feedback: Material(
                         color: Colors.transparent,
                         child: Opacity(
@@ -161,6 +165,7 @@ class _OverdueTrayWidgetState extends ConsumerState<OverdueTrayWidget> {
                                   value: item.isComplete,
                                   onChanged: (val) async {
                                     if (val != null) {
+                                      HapticFeedback.lightImpact();
                                       final updated = item.copyWith(
                                         isComplete: val,
                                         completedAt: val ? DateTime.now() : null,

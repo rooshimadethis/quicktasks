@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quicktasks/domain/models/calendar_item.dart';
 import 'package:quicktasks/domain/repositories/calendar_item_repository.dart';
@@ -79,6 +80,9 @@ class BacklogTrayWidget extends ConsumerWidget {
                       data: item,
                       maxSimultaneousDrags: 1,
                       delay: const Duration(milliseconds: 300), // ~300ms hold threshold
+                      onDragStarted: () {
+                        HapticFeedback.mediumImpact();
+                      },
                       feedback: Material(
                         color: Colors.transparent,
                         child: Opacity(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:quicktasks/domain/models/calendar_item.dart';
@@ -27,12 +28,14 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
   }
 
   void _shiftCenterDate(int days) {
+    HapticFeedback.selectionClick();
     setState(() {
       _centerDate = _centerDate.add(Duration(days: days));
     });
   }
 
   void _goToToday() {
+    HapticFeedback.selectionClick();
     final now = DateTime.now();
     setState(() {
       _centerDate = DateTime(now.year, now.month, now.day);
@@ -208,6 +211,7 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
                               // Column Header
                               InkWell(
                                 onTap: () {
+                                  HapticFeedback.selectionClick();
                                   // Navigate to Day View for this date
                                   // Since DayViewPage displays the day, we need to pass the date or update its state
                                   // We can push to DayViewPage and pass date parameters if needed, or simply pass the date
@@ -258,7 +262,10 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
                                     final shape = _getCategoryShape(item.category);
 
                                     return InkWell(
-                                      onTap: () => ItemBottomSheet.show(context, initialItem: item),
+                                      onTap: () {
+                                        HapticFeedback.lightImpact();
+                                        ItemBottomSheet.show(context, initialItem: item);
+                                      },
                                       child: Container(
                                         padding: const EdgeInsets.all(6.0),
                                         decoration: BoxDecoration(

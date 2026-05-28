@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:quicktasks/domain/models/calendar_item.dart';
@@ -221,6 +222,7 @@ class _ItemBottomSheetState extends ConsumerState<ItemBottomSheet> {
       await repo.updateItem(updatedItem);
     }
 
+    HapticFeedback.mediumImpact();
     if (mounted) Navigator.pop(context);
     
     // Trigger background sync
@@ -236,6 +238,7 @@ class _ItemBottomSheetState extends ConsumerState<ItemBottomSheet> {
 
     await repo.deleteItem(item.localId);
 
+    HapticFeedback.heavyImpact();
     if (mounted) Navigator.pop(context);
     
     // Trigger background sync
@@ -260,7 +263,10 @@ class _ItemBottomSheetState extends ConsumerState<ItemBottomSheet> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   TextButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.pop(context);
+                    },
                     child: const Text('CANCEL'),
                   ),
                   Row(
