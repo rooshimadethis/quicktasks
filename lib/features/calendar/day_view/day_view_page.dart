@@ -49,8 +49,12 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
 
   Timer? _timeIndicatorTimer;
 
-  Offset? _draggedOffset;
-  CalendarItem? _draggedItem;
+  final ValueNotifier<DateTime?> _draggedSlotTimeNotifier =
+      ValueNotifier<DateTime?>(null);
+  final ValueNotifier<CalendarItem?> _draggedItemNotifier =
+      ValueNotifier<CalendarItem?>(null);
+
+  final GlobalKey _timelineGridKey = GlobalKey();
 
   bool _isToday(DateTime day) {
     final now = DateTime.now();
@@ -80,6 +84,8 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
   void dispose() {
     _stopAutoScroll();
     _timeIndicatorTimer?.cancel();
+    _draggedSlotTimeNotifier.dispose();
+    _draggedItemNotifier.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -173,6 +179,38 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
       sum += w;
     }
     return 24.0;
+  }
+
+  DateTime _calculateSlotTimeFromLocalX(
+    double x,
+    List<CalendarItem> timelineItems,
+  ) {
+    final hourWidths = _calculateHourWidths(timelineItems);
+    final hourDec = _getHourDecOfCoordinate(x, hourWidths);
+    final hour = hourDec.floor().clamp(0, 23);
+    final fracOfHour = hourDec - hour;
+    final minute = ((fracOfHour * 60) / 30).round() * 30;
+    final finalHour = minute == 60 ? (hour + 1).clamp(0, 23) : hour;
+    final finalMinute = minute == 60 ? 0 : minute;
+
+    return DateTime(
+      _selectedDay.year,
+      _selectedDay.month,
+      _selectedDay.day,
+      finalHour,
+      finalMinute,
+    );
+  }
+
+  DateTime? _calculateSlotTime(
+    Offset globalOffset,
+    List<CalendarItem> timelineItems,
+  ) {
+    final renderBox =
+        _timelineGridKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return null;
+    final localOffset = renderBox.globalToLocal(globalOffset);
+    return _calculateSlotTimeFromLocalX(localOffset.dx, timelineItems);
   }
 
   void _autoScrollToFirstEvent(List<CalendarItem> items) {
@@ -534,16 +572,16 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                   scrollDirection: Axis.horizontal,
                   child: DragTarget<CalendarItem>(
                     onMove: (details) {
-                      final renderBox =
-                          context.findRenderObject() as RenderBox?;
-                      if (renderBox != null) {
-                        final localOffset = renderBox.globalToLocal(
-                          details.offset,
-                        );
-                        setState(() {
-                          _draggedOffset = localOffset;
-                          _draggedItem = details.data;
-                        });
+                      final slotTime = _calculateSlotTime(
+                        details.offset,
+                        timelineItems,
+                      );
+                      if (slotTime != null) {
+                        if (slotTime != _draggedSlotTimeNotifier.value ||
+                            _draggedItemNotifier.value != details.data) {
+                          _draggedSlotTimeNotifier.value = slotTime;
+                          _draggedItemNotifier.value = details.data;
+                        }
                       }
 
                       final x = details.offset.dx;
@@ -558,42 +596,19 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                     },
                     onLeave: (_) {
                       _stopAutoScroll();
-                      setState(() {
-                        _draggedOffset = null;
-                        _draggedItem = null;
-                      });
+                      _draggedSlotTimeNotifier.value = null;
+                      _draggedItemNotifier.value = null;
                     },
                     onWillAcceptWithDetails: (details) => true,
                     onAcceptWithDetails: (details) async {
                       _stopAutoScroll();
-                      setState(() {
-                        _draggedOffset = null;
-                        _draggedItem = null;
-                      });
-                      final renderBox =
-                          context.findRenderObject() as RenderBox?;
-                      if (renderBox == null) return;
-                      final localOffset = renderBox.globalToLocal(
+                      _draggedSlotTimeNotifier.value = null;
+                      _draggedItemNotifier.value = null;
+                      final slotTime = _calculateSlotTime(
                         details.offset,
+                        timelineItems,
                       );
-                      final x = localOffset.dx;
-                      final hourWidths = _calculateHourWidths(timelineItems);
-                      final hourDec = _getHourDecOfCoordinate(x, hourWidths);
-                      final hour = hourDec.floor().clamp(0, 23);
-                      final fracOfHour = hourDec - hour;
-                      final minute = ((fracOfHour * 60) / 30).round() * 30;
-                      final finalHour = minute == 60
-                          ? (hour + 1).clamp(0, 23)
-                          : hour;
-                      final finalMinute = minute == 60 ? 0 : minute;
-
-                      final slotTime = DateTime(
-                        _selectedDay.year,
-                        _selectedDay.month,
-                        _selectedDay.day,
-                        finalHour,
-                        finalMinute,
-                      );
+                      if (slotTime == null) return;
 
                       final item = details.data;
                       final duration =
@@ -609,50 +624,6 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                       ref.read(googleCalendarServiceProvider).sync();
                     },
                     builder: (context, candidateData, rejectedData) {
-                      final isDragging =
-                          _draggedOffset != null && _draggedItem != null;
-                      double? highlightLeft;
-                      double? highlightWidth;
-                      if (isDragging) {
-                        final x = _draggedOffset!.dx;
-                        final hourDec = _getHourDecOfCoordinate(x, hourWidths);
-                        final hour = hourDec.floor().clamp(0, 23);
-                        final fracOfHour = hourDec - hour;
-                        final minute = ((fracOfHour * 60) / 30).round() * 30;
-                        final finalHour = minute == 60
-                            ? (hour + 1).clamp(0, 23)
-                            : hour;
-                        final finalMinute = minute == 60 ? 0 : minute;
-
-                        final slotStartDec = finalHour + finalMinute / 60.0;
-                        final duration =
-                            _draggedItem!.endAt != null &&
-                                _draggedItem!.startAt != null
-                            ? _draggedItem!.endAt!.difference(
-                                _draggedItem!.startAt!,
-                              )
-                            : const Duration(minutes: 30);
-
-                        final durationDec = duration.inMinutes / 60.0;
-                        final slotEndDec = (slotStartDec + durationDec).clamp(
-                          0.0,
-                          24.0,
-                        );
-
-                        highlightLeft = _getCoordinateOfHour(
-                          slotStartDec,
-                          hourWidths,
-                        );
-                        final highlightRight = _getCoordinateOfHour(
-                          slotEndDec,
-                          hourWidths,
-                        );
-                        highlightWidth = max(
-                          highlightRight - highlightLeft,
-                          80.0,
-                        );
-                      }
-
                       final maxRow = positionedItems.isNotEmpty
                           ? (positionedItems
                                     .map((pi) => pi.rowIndex)
@@ -666,6 +637,7 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                         (a, b) => a + b,
                       );
                       return Container(
+                        key: _timelineGridKey,
                         width: totalTimelineWidth,
                         height: timelineHeight,
                         color: Colors.transparent,
@@ -732,55 +704,83 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                             ),
 
                             // Highlight slot on hover during drag
-                            if (isDragging &&
-                                highlightLeft != null &&
-                                highlightWidth != null)
-                              Positioned(
-                                left: highlightLeft,
-                                width: highlightWidth,
-                                top: _headerHeight,
-                                bottom: 0,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.primary.withValues(
-                                      alpha: 0.15,
-                                    ),
-                                    border: Border.symmetric(
-                                      vertical: BorderSide(
-                                        color: theme.colorScheme.primary,
-                                        width: 1.5,
+                            ValueListenableBuilder<DateTime?>(
+                              valueListenable: _draggedSlotTimeNotifier,
+                              builder: (context, slotTime, child) {
+                                if (slotTime == null) {
+                                  return const SizedBox.shrink();
+                                }
+                                return ValueListenableBuilder<CalendarItem?>(
+                                  valueListenable: _draggedItemNotifier,
+                                  builder: (context, draggedItem, child) {
+                                    if (draggedItem == null) {
+                                      return const SizedBox.shrink();
+                                    }
+
+                                    final slotStartDec =
+                                        slotTime.hour + slotTime.minute / 60.0;
+                                    final duration =
+                                        draggedItem.endAt != null &&
+                                            draggedItem.startAt != null
+                                        ? draggedItem.endAt!.difference(
+                                            draggedItem.startAt!,
+                                          )
+                                        : const Duration(minutes: 30);
+
+                                    final durationDec =
+                                        duration.inMinutes / 60.0;
+                                    final slotEndDec =
+                                        (slotStartDec + durationDec).clamp(
+                                          0.0,
+                                          24.0,
+                                        );
+
+                                    final highlightLeft = _getCoordinateOfHour(
+                                      slotStartDec,
+                                      hourWidths,
+                                    );
+                                    final highlightRight = _getCoordinateOfHour(
+                                      slotEndDec,
+                                      hourWidths,
+                                    );
+                                    final highlightWidth = max(
+                                      highlightRight - highlightLeft,
+                                      80.0,
+                                    );
+
+                                    return Positioned(
+                                      left: highlightLeft,
+                                      width: highlightWidth,
+                                      top: _headerHeight,
+                                      bottom: 0,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: theme.colorScheme.primary
+                                              .withValues(alpha: 0.15),
+                                          border: Border.symmetric(
+                                            vertical: BorderSide(
+                                              color: theme.colorScheme.primary,
+                                              width: 1.5,
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ),
-                                ),
-                              ),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
 
                             // Tap detector for slot creation
                             Positioned.fill(
                               top: _headerHeight,
                               child: GestureDetector(
                                 onTapUp: (details) {
-                                  final x = details.localPosition.dx;
-                                  final hourDec = _getHourDecOfCoordinate(
-                                    x,
-                                    hourWidths,
-                                  );
-                                  final hour = hourDec.floor().clamp(0, 23);
-                                  final fracOfHour = hourDec - hour;
-                                  final minute =
-                                      ((fracOfHour * 60) / 30).round() * 30;
-                                  final finalHour = minute == 60
-                                      ? (hour + 1).clamp(0, 23)
-                                      : hour;
-                                  final finalMinute = minute == 60 ? 0 : minute;
-
-                                  final targetTime = DateTime(
-                                    _selectedDay.year,
-                                    _selectedDay.month,
-                                    _selectedDay.day,
-                                    finalHour,
-                                    finalMinute,
-                                  );
+                                  final targetTime =
+                                      _calculateSlotTimeFromLocalX(
+                                        details.localPosition.dx,
+                                        timelineItems,
+                                      );
 
                                   ItemBottomSheet.show(
                                     context,
@@ -796,6 +796,7 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                               final top =
                                   _headerHeight + pi.rowIndex * _rowHeight;
                               return Positioned(
+                                key: ValueKey('pos_${pi.item.localId}'),
                                 left: pi.left,
                                 width: pi.width,
                                 top: top,
@@ -805,24 +806,53 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                                     horizontal: 2.0,
                                     vertical: 3.0,
                                   ),
-                                  child: CalendarItemChip(
-                                    item: pi.item,
-                                    onTap: () => ItemBottomSheet.show(
-                                      context,
-                                      initialItem: pi.item,
+                                  child: LongPressDraggable<CalendarItem>(
+                                    key: ValueKey('drag_${pi.item.localId}'),
+                                    data: pi.item,
+                                    maxSimultaneousDrags: 1,
+                                    delay: const Duration(milliseconds: 300),
+                                    feedback: Material(
+                                      color: Colors.transparent,
+                                      child: SizedBox(
+                                        width: pi.width,
+                                        height: _rowHeight,
+                                        child: Opacity(
+                                          opacity: 0.85,
+                                          child: CalendarItemChip(
+                                            item: pi.item,
+                                            onTap: null,
+                                            onComplete: null,
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                    onComplete: () async {
-                                      final updated = pi.item.copyWith(
-                                        isComplete: !pi.item.isComplete,
-                                        completedAt: !pi.item.isComplete
-                                            ? DateTime.now()
-                                            : null,
-                                      );
-                                      await repo.updateItem(updated);
-                                      ref
-                                          .read(googleCalendarServiceProvider)
-                                          .sync();
-                                    },
+                                    childWhenDragging: Opacity(
+                                      opacity: 0.3,
+                                      child: CalendarItemChip(
+                                        item: pi.item,
+                                        onTap: null,
+                                        onComplete: null,
+                                      ),
+                                    ),
+                                    child: CalendarItemChip(
+                                      item: pi.item,
+                                      onTap: () => ItemBottomSheet.show(
+                                        context,
+                                        initialItem: pi.item,
+                                      ),
+                                      onComplete: () async {
+                                        final updated = pi.item.copyWith(
+                                          isComplete: !pi.item.isComplete,
+                                          completedAt: !pi.item.isComplete
+                                              ? DateTime.now()
+                                              : null,
+                                        );
+                                        await repo.updateItem(updated);
+                                        ref
+                                            .read(googleCalendarServiceProvider)
+                                            .sync();
+                                      },
+                                    ),
                                   ),
                                 ),
                               );
