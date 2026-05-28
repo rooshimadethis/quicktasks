@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,15 +14,15 @@ import 'package:quicktasks/features/sync/google_calendar_service.dart';
 
 class PositionedItem {
   final CalendarItem item;
-  final double top;
-  final double height;
-  double left = 0.0;
-  double width = 1.0;
+  final double left;
+  final double width;
+  final int rowIndex;
 
   PositionedItem({
     required this.item,
-    required this.top,
-    required this.height,
+    required this.left,
+    required this.width,
+    required this.rowIndex,
   });
 }
 
@@ -35,15 +36,16 @@ class DayViewPage extends ConsumerStatefulWidget {
 class _DayViewPageState extends ConsumerState<DayViewPage> {
   late DateTime _selectedDay;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final double _slotHeight = 70.0;
-  final double _timelineHourHeight = 140.0; // 2 slots * 70dp
 
-  // State for hold + drag gesture creation
-  int? _dragStartSlot;
-  int? _dragCurrentSlot;
-  
+  final double _hourWidth = 180.0;
+  final double _rowHeight = 64.0;
+  final double _headerHeight = 40.0;
+
   late ScrollController _scrollController;
   DateTime? _lastAutoScrolledDay;
+
+  // Timer for drag auto scrolling
+  Timer? _autoScrollTimer;
 
   @override
   void initState() {
@@ -51,7 +53,7 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
     final now = DateTime.now();
     _selectedDay = DateTime(now.year, now.month, now.day);
     _scrollController = ScrollController();
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkInitialSync();
     });
@@ -59,8 +61,100 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
 
   @override
   void dispose() {
+    _stopAutoScroll();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _startAutoScroll({required bool left}) {
+    if (_autoScrollTimer != null) return; // already running
+    _autoScrollTimer = Timer.periodic(const Duration(milliseconds: 50), (
+      timer,
+    ) {
+      if (!_scrollController.hasClients) {
+        _stopAutoScroll();
+        return;
+      }
+      final currentScroll = _scrollController.offset;
+      final maxScroll = _scrollController.position.maxScrollExtent;
+      final step = left ? -15.0 : 15.0;
+      final target = (currentScroll + step).clamp(0.0, maxScroll);
+
+      _scrollController.jumpTo(target);
+    });
+  }
+
+  void _stopAutoScroll() {
+    _autoScrollTimer?.cancel();
+    _autoScrollTimer = null;
+  }
+
+  List<double> _calculateHourWidths(List<CalendarItem> timelineItems) {
+    final widths = List<double>.filled(24, _hourWidth * 0.5);
+    final dayStart = _selectedDay;
+    final dayEnd = _selectedDay.add(const Duration(days: 1));
+
+    for (int h = 0; h < 24; h++) {
+      final startOfHour = h.toDouble();
+      final endOfHour = (h + 1).toDouble();
+
+      final hasOverlap = timelineItems.any((item) {
+        if (item.startAt == null || item.endAt == null) return false;
+
+        final itemStart = item.startAt!;
+        final itemEnd = item.endAt!;
+
+        // Clamp start/end times to day boundaries
+        final startCalculated = itemStart.isBefore(dayStart)
+            ? dayStart
+            : itemStart;
+        final endCalculated = itemEnd.isAfter(dayEnd) ? dayEnd : itemEnd;
+
+        final startDec = startCalculated.hour + startCalculated.minute / 60.0;
+        final endDec =
+            endCalculated.year > dayStart.year ||
+                endCalculated.month > dayStart.month ||
+                endCalculated.day > dayStart.day
+            ? 24.0
+            : (endCalculated.hour + endCalculated.minute / 60.0);
+
+        return startDec < endOfHour && endDec > startOfHour;
+      });
+
+      if (hasOverlap) {
+        widths[h] = _hourWidth;
+      }
+    }
+    return widths;
+  }
+
+  double _getLeftOfHour(int h, List<double> hourWidths) {
+    double sum = 0.0;
+    for (int i = 0; i < h; i++) {
+      sum += hourWidths[i];
+    }
+    return sum;
+  }
+
+  double _getCoordinateOfHour(double dec, List<double> hourWidths) {
+    final h = dec.floor().clamp(0, 23);
+    final frac = dec - h;
+    final leftOfHour = _getLeftOfHour(h, hourWidths);
+    final widthOfHour = hourWidths[h];
+    return leftOfHour + frac * widthOfHour;
+  }
+
+  double _getHourDecOfCoordinate(double x, List<double> hourWidths) {
+    double sum = 0.0;
+    for (int h = 0; h < 24; h++) {
+      final w = hourWidths[h];
+      if (x >= sum && x < sum + w) {
+        final frac = (x - sum) / w;
+        return h + frac;
+      }
+      sum += w;
+    }
+    return 24.0;
   }
 
   void _autoScrollToFirstEvent(List<CalendarItem> items) {
@@ -80,7 +174,8 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
       }
     }
 
-    final targetOffset = earliestHour * _timelineHourHeight;
+    final hourWidths = _calculateHourWidths(items);
+    final targetOffset = _getCoordinateOfHour(earliestHour, hourWidths);
     final maxScroll = _scrollController.position.maxScrollExtent;
     _scrollController.jumpTo(targetOffset.clamp(0.0, maxScroll));
     _lastAutoScrolledDay = _selectedDay;
@@ -94,7 +189,10 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
         return PopScope(
           canPop: false,
           child: AlertDialog(
-            title: const Text('SYNCING CALENDAR', style: TextStyle(fontWeight: FontWeight.bold)),
+            title: const Text(
+              'SYNCING CALENDAR',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -120,7 +218,11 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
         Navigator.pop(context); // Dismiss dialog
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(success ? 'Sync completed successfully.' : 'Sync failed. Please try again.'),
+            content: Text(
+              success
+                  ? 'Sync completed successfully.'
+                  : 'Sync failed. Please try again.',
+            ),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -142,7 +244,9 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
     final dao = ref.read(calendarItemDaoProvider);
     final hasSynced = await dao.hasAnySyncToken();
     if (!hasSynced) {
-      await _runSyncWithProgress('Syncing your Google Calendar events for the first time. Please wait...');
+      await _runSyncWithProgress(
+        'Syncing your Google Calendar events for the first time. Please wait...',
+      );
     }
   }
 
@@ -159,101 +263,83 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
     });
   }
 
-  int _getSlotIndexFromOffset(double localY) {
-    return (localY / _slotHeight).floor().clamp(0, 47);
-  }
-
   Future<void> _triggerManualSync() async {
     await _runSyncWithProgress('Refreshing calendar data. Please wait...');
   }
 
-  List<PositionedItem> _layoutItems(List<CalendarItem> items) {
+  List<PositionedItem> _layoutItems(
+    List<CalendarItem> items,
+    List<double> hourWidths,
+  ) {
     final list = <PositionedItem>[];
-    for (final item in items) {
-      if (item.startAt == null || item.endAt == null || item.isAllDay) continue;
+    final dayStart = _selectedDay;
+    final dayEnd = _selectedDay.add(const Duration(days: 1));
 
-      final start = item.startAt!;
-      final end = item.endAt!;
-      
-      // Calculate top and height relative to the 24 hour timeline
-      final startDec = start.hour + start.minute / 60.0;
-      final endDec = end.hour + end.minute / 60.0;
-      
-      final top = startDec * _timelineHourHeight;
-      // Ensure minimum height of 56.0 for readability/tap targets
-      final height = max((endDec - startDec) * _timelineHourHeight, 56.0);
+    // 1. Filter out unscheduled backlog items and all-day items
+    final timelineItems = items
+        .where((i) => i.startAt != null && i.endAt != null && !i.isAllDay)
+        .toList();
 
-      list.add(PositionedItem(item: item, top: top, height: height));
-    }
-
-    // Sort by top (start time), then height descending
-    list.sort((a, b) {
-      if (a.top != b.top) return a.top.compareTo(b.top);
-      return b.height.compareTo(a.height);
+    // 2. Sort chronologically by start time, and then by end time descending
+    timelineItems.sort((a, b) {
+      final comp = a.startAt!.compareTo(b.startAt!);
+      if (comp != 0) return comp;
+      return b.endAt!.compareTo(a.endAt!);
     });
 
-    // Simple overlapping columns grouping
-    final groups = <List<PositionedItem>>[];
-    for (final pi in list) {
-      List<PositionedItem>? targetGroup;
-      for (final group in groups) {
-        final overlaps = group.any((other) {
-          final aStart = pi.top;
-          final aEnd = pi.top + pi.height;
-          final bStart = other.top;
-          final bEnd = other.top + other.height;
-          return aStart < bEnd && bStart < aEnd;
-        });
-        if (overlaps) {
-          targetGroup = group;
+    // 3. Stacking row end times
+    final rowEndTimes = <DateTime>[];
+
+    for (final item in timelineItems) {
+      final start = item.startAt!;
+      final end = item.endAt!;
+
+      // Clamp start/end times to day boundaries for horizontal positioning
+      final startCalculated = start.isBefore(dayStart) ? dayStart : start;
+      final endCalculated = end.isAfter(dayEnd) ? dayEnd : end;
+
+      final startDec = startCalculated.hour + startCalculated.minute / 60.0;
+      final endDec =
+          endCalculated.year > dayStart.year ||
+              endCalculated.month > dayStart.month ||
+              endCalculated.day > dayStart.day
+          ? 24.0
+          : (endCalculated.hour + endCalculated.minute / 60.0);
+
+      final left = _getCoordinateOfHour(startDec, hourWidths);
+      final right = _getCoordinateOfHour(endDec, hourWidths);
+
+      // Enforce minimum width of 80dp for readability/tap targets
+      final width = max(right - left, 80.0);
+
+      int targetRowIndex = -1;
+      for (int i = 0; i < rowEndTimes.length; i++) {
+        if (start.isAtSameMomentAs(rowEndTimes[i]) ||
+            start.isAfter(rowEndTimes[i])) {
+          targetRowIndex = i;
           break;
         }
       }
 
-      if (targetGroup == null) {
-        targetGroup = [];
-        groups.add(targetGroup);
-      }
-      targetGroup.add(pi);
-    }
-
-    for (final group in groups) {
-      final columns = <List<PositionedItem>>[];
-      for (final pi in group) {
-        int colIndex = 0;
-        while (colIndex < columns.length) {
-          final col = columns[colIndex];
-          final overlaps = col.any((other) {
-            final aStart = pi.top;
-            final aEnd = pi.top + pi.height;
-            final bStart = other.top;
-            final bEnd = other.top + other.height;
-            return aStart < bEnd && bStart < aEnd;
-          });
-          if (!overlaps) {
-            break;
-          }
-          colIndex++;
-        }
-
-        if (colIndex >= columns.length) {
-          columns.add([]);
-        }
-        columns[colIndex].add(pi);
+      if (targetRowIndex == -1) {
+        targetRowIndex = rowEndTimes.length;
+        rowEndTimes.add(end);
+      } else {
+        rowEndTimes[targetRowIndex] = end;
       }
 
-      final totalCols = columns.length;
-      for (int i = 0; i < totalCols; i++) {
-        for (final pi in columns[i]) {
-          pi.left = i / totalCols;
-          pi.width = 1.0 / totalCols;
-        }
-      }
+      list.add(
+        PositionedItem(
+          item: item,
+          left: left,
+          width: width,
+          rowIndex: targetRowIndex,
+        ),
+      );
     }
 
     return list;
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -265,17 +351,39 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
     final itemsStream = repo.watchItemsInWindow(dayStart, dayEnd);
 
     // Weekdays list for descriptive header
-    final weekdays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
-    final months = [
-      'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 
-      'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'
+    final weekdays = [
+      'MONDAY',
+      'TUESDAY',
+      'WEDNESDAY',
+      'THURSDAY',
+      'FRIDAY',
+      'SATURDAY',
+      'SUNDAY',
     ];
-    final dateStr = '${weekdays[_selectedDay.weekday - 1]}, ${months[_selectedDay.month - 1]} ${_selectedDay.day}';
+    final months = [
+      'JANUARY',
+      'FEBRUARY',
+      'MARCH',
+      'APRIL',
+      'MAY',
+      'JUNE',
+      'JULY',
+      'AUGUST',
+      'SEPTEMBER',
+      'OCTOBER',
+      'NOVEMBER',
+      'DECEMBER',
+    ];
+    final dateStr =
+        '${weekdays[_selectedDay.weekday - 1]}, ${months[_selectedDay.month - 1]} ${_selectedDay.day}';
 
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
-        title: Text(dateStr, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        title: Text(
+          dateStr,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.sync),
@@ -301,7 +409,8 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
           final items = snapshot.data ?? [];
           final allDayItems = items.where((i) => i.isAllDay).toList();
           final timelineItems = items.where((i) => !i.isAllDay).toList();
-          final positionedItems = _layoutItems(timelineItems);
+          final hourWidths = _calculateHourWidths(timelineItems);
+          final positionedItems = _layoutItems(timelineItems, hourWidths);
 
           // Schedule auto-scroll on next frame if date changed
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -315,7 +424,12 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
               // 1. Navigation controls
               Container(
                 decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: theme.colorScheme.primary, width: 1.5)),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: theme.colorScheme.primary,
+                      width: 1.5,
+                    ),
+                  ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -343,18 +457,30 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                   padding: const EdgeInsets.all(8.0),
                   decoration: BoxDecoration(
                     color: theme.scaffoldBackgroundColor,
-                    border: Border(bottom: BorderSide(color: theme.colorScheme.primary, width: 1.5)),
+                    border: Border(
+                      bottom: BorderSide(
+                        color: theme.colorScheme.primary,
+                        width: 1.5,
+                      ),
+                    ),
                   ),
                   child: Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: allDayItems.map((item) {
                       return InkWell(
-                        onTap: () => ItemBottomSheet.show(context, initialItem: item),
+                        onTap: () =>
+                            ItemBottomSheet.show(context, initialItem: item),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
-                            border: Border.all(color: theme.colorScheme.primary, width: 1.5),
+                            border: Border.all(
+                              color: theme.colorScheme.primary,
+                              width: 1.5,
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -362,7 +488,10 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                               const Text('📅 ', style: TextStyle(fontSize: 12)),
                               Text(
                                 item.title,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
                               ),
                             ],
                           ),
@@ -376,173 +505,219 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
               Expanded(
                 child: SingleChildScrollView(
                   controller: _scrollController,
-                  child: GestureDetector(
-                    onLongPressStart: (details) {
-                      setState(() {
-                        _dragStartSlot = _getSlotIndexFromOffset(details.localPosition.dy);
-                        _dragCurrentSlot = _dragStartSlot;
-                      });
-                    },
-                    onLongPressMoveUpdate: (details) {
-                      setState(() {
-                        _dragCurrentSlot = _getSlotIndexFromOffset(details.localPosition.dy);
-                      });
-                    },
-                    onLongPressEnd: (details) {
-                      if (_dragStartSlot != null && _dragCurrentSlot != null) {
-                        final startSlot = min(_dragStartSlot!, _dragCurrentSlot!);
-                        final endSlot = max(_dragStartSlot!, _dragCurrentSlot!);
-                        
-                        final startHour = startSlot ~/ 2;
-                        final startMin = (startSlot % 2) * 30;
-                        final endHour = (endSlot + 1) ~/ 2;
-                        final endMin = ((endSlot + 1) % 2) * 30;
-
-                        final startPrefill = DateTime(
-                          _selectedDay.year, _selectedDay.month, _selectedDay.day, 
-                          startHour, startMin
-                        );
-                        final endPrefill = DateTime(
-                          _selectedDay.year, _selectedDay.month, _selectedDay.day, 
-                          endHour, endMin
-                        );
-
-                        // Trigger sheet with Event prefilled duration
-                        ItemBottomSheet.show(
-                          context, 
-                          prefilledStart: startPrefill,
-                          prefilledEnd: endPrefill,
-                        );
+                  scrollDirection: Axis.horizontal,
+                  child: DragTarget<CalendarItem>(
+                    onMove: (details) {
+                      final x = details.offset.dx;
+                      final screenWidth = MediaQuery.of(context).size.width;
+                      if (x < 60) {
+                        _startAutoScroll(left: true);
+                      } else if (x > screenWidth - 60) {
+                        _startAutoScroll(left: false);
+                      } else {
+                        _stopAutoScroll();
                       }
-                      setState(() {
-                        _dragStartSlot = null;
-                        _dragCurrentSlot = null;
-                      });
                     },
-                    child: Stack(
-                      children: [
-                        // Background Slots & Gridlines
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: 48,
-                          itemBuilder: (context, index) {
-                            final hour = index ~/ 2;
-                            final minute = (index % 2) * 30;
-                            final slotTime = DateTime(
-                              _selectedDay.year, _selectedDay.month, _selectedDay.day,
-                              hour, minute
-                            );
+                    onLeave: (_) => _stopAutoScroll(),
+                    onWillAcceptWithDetails: (details) => true,
+                    onAcceptWithDetails: (details) async {
+                      _stopAutoScroll();
+                      final renderBox =
+                          context.findRenderObject() as RenderBox?;
+                      if (renderBox == null) return;
+                      final localOffset = renderBox.globalToLocal(
+                        details.offset,
+                      );
+                      final x = localOffset.dx;
+                      final hourWidths = _calculateHourWidths(timelineItems);
+                      final hourDec = _getHourDecOfCoordinate(x, hourWidths);
+                      final hour = hourDec.floor().clamp(0, 23);
+                      final fracOfHour = hourDec - hour;
+                      final minute = ((fracOfHour * 60) / 30).round() * 30;
+                      final finalHour = minute == 60
+                          ? (hour + 1).clamp(0, 23)
+                          : hour;
+                      final finalMinute = minute == 60 ? 0 : minute;
 
-                            return DragTarget<CalendarItem>(
-                              onWillAcceptWithDetails: (details) => true,
-                              onAcceptWithDetails: (details) async {
-                                final item = details.data;
-                                final duration = item.endAt != null && item.startAt != null
-                                    ? item.endAt!.difference(item.startAt!)
-                                    : const Duration(minutes: 30);
-                                final updated = item.copyWith(
-                                  startAt: slotTime,
-                                  endAt: slotTime.add(duration),
-                                );
-                                await repo.updateItem(updated);
-                                ref.read(googleCalendarServiceProvider).sync();
-                              },
-                              builder: (context, candidateData, rejectedData) {
-                                final isOver = candidateData.isNotEmpty;
-                                final isHourHeader = index % 2 == 0;
-                                final timeLabel = isHourHeader 
-                                    ? '${hour == 0 || hour == 12 ? 12 : hour % 12}:${minute.toString().padLeft(2, '0')} ${hour < 12 ? 'AM' : 'PM'}'
-                                    : '';
+                      final slotTime = DateTime(
+                        _selectedDay.year,
+                        _selectedDay.month,
+                        _selectedDay.day,
+                        finalHour,
+                        finalMinute,
+                      );
 
+                      final item = details.data;
+                      final duration =
+                          item.endAt != null && item.startAt != null
+                          ? item.endAt!.difference(item.startAt!)
+                          : const Duration(minutes: 30);
+
+                      final updated = item.copyWith(
+                        startAt: slotTime,
+                        endAt: slotTime.add(duration),
+                      );
+                      await repo.updateItem(updated);
+                      ref.read(googleCalendarServiceProvider).sync();
+                    },
+                    builder: (context, candidateData, rejectedData) {
+                      final isOver = candidateData.isNotEmpty;
+                      final maxRow = positionedItems.isNotEmpty
+                          ? (positionedItems
+                                    .map((pi) => pi.rowIndex)
+                                    .reduce(max) +
+                                1)
+                          : 1;
+                      final timelineHeight =
+                          _headerHeight + maxRow * _rowHeight;
+
+                      final totalTimelineWidth = hourWidths.reduce(
+                        (a, b) => a + b,
+                      );
+                      return Container(
+                        width: totalTimelineWidth,
+                        height: timelineHeight,
+                        color: isOver
+                            ? theme.colorScheme.primary.withValues(alpha: 0.05)
+                            : Colors.transparent,
+                        child: Stack(
+                          children: [
+                            // Grid lines
+                            Row(
+                              children: List.generate(24, (hour) {
                                 return Container(
-                                  height: _slotHeight,
+                                  width: hourWidths[hour],
                                   decoration: BoxDecoration(
                                     border: Border(
-                                      bottom: BorderSide(
-                                        color: theme.colorScheme.primary.withValues(alpha: isHourHeader ? 0.3 : 0.1),
-                                        width: isHourHeader ? 1.2 : 0.8,
+                                      right: BorderSide(
+                                        color: theme.colorScheme.primary
+                                            .withValues(alpha: 0.15),
+                                        width: 1.0,
                                       ),
                                     ),
-                                    color: isOver ? theme.colorScheme.primary.withValues(alpha: 0.05) : Colors.transparent,
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      // Time Slot Column
-                                      Container(
-                                        width: 75,
-                                        padding: const EdgeInsets.only(left: 8.0),
-                                        alignment: Alignment.centerLeft,
-                                        child: Text(
-                                          timeLabel,
-                                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                                        ),
-                                      ),
-                                      const VerticalDivider(width: 1, thickness: 1.2),
-                                      Expanded(
-                                        child: InkWell(
-                                          onTap: () {
-                                            ItemBottomSheet.show(context, prefilledStart: slotTime);
-                                          },
-                                          child: const SizedBox.expand(),
-                                        ),
-                                      ),
-                                    ],
                                   ),
                                 );
-                              },
-                            );
-                          },
-                        ),
-
-                        // Hold-Drag visual highlight
-                        if (_dragStartSlot != null && _dragCurrentSlot != null)
-                          Positioned(
-                            left: 76,
-                            right: 0,
-                            top: min(_dragStartSlot!, _dragCurrentSlot!) * _slotHeight,
-                            height: (max(_dragStartSlot!, _dragCurrentSlot!) - min(_dragStartSlot!, _dragCurrentSlot!) + 1) * _slotHeight,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                                border: Border.all(color: theme.colorScheme.primary, width: 2.0),
-                              ),
-                              alignment: Alignment.center,
-                              child: const Text(
-                                'CREATING EVENT...',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                              ),
+                              }),
                             ),
-                          ),
 
-                        // Positioned Foreground Event/Task Chips
-                        ...positionedItems.map((pi) {
-                          // Left margin offsets from time column (76dp)
-                          const leftOffset = 76.0;
-                          return Positioned(
-                            left: leftOffset + pi.left * (MediaQuery.of(context).size.width - leftOffset),
-                            width: pi.width * (MediaQuery.of(context).size.width - leftOffset) - 4, // 4px padding
-                            top: pi.top,
-                            height: pi.height,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 1.0, horizontal: 2.0),
-                              child: CalendarItemChip(
-                                item: pi.item,
-                                onTap: () => ItemBottomSheet.show(context, initialItem: pi.item),
-                                onComplete: () async {
-                                  final updated = pi.item.copyWith(
-                                    isComplete: !pi.item.isComplete,
-                                    completedAt: !pi.item.isComplete ? DateTime.now() : null,
+                            // Hour Labels
+                            Positioned(
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              height: _headerHeight,
+                              child: Row(
+                                children: List.generate(24, (hour) {
+                                  final is12 = hour == 0 || hour == 12;
+                                  final label =
+                                      '${is12 ? 12 : hour % 12}:00 ${hour < 12 ? 'AM' : 'PM'}';
+                                  return Container(
+                                    width: hourWidths[hour],
+                                    padding: const EdgeInsets.only(
+                                      left: 6.0,
+                                      top: 8.0,
+                                    ),
+                                    alignment: Alignment.topLeft,
+                                    child: Text(
+                                      label,
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                                   );
-                                  await repo.updateItem(updated);
-                                  ref.read(googleCalendarServiceProvider).sync();
-                                },
+                                }),
                               ),
                             ),
-                          );
-                        }),
-                      ],
-                    ),
+
+                            // Header line
+                            Positioned(
+                              top: _headerHeight - 1,
+                              left: 0,
+                              right: 0,
+                              child: Divider(
+                                height: 1,
+                                thickness: 1.2,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+
+                            // Tap detector for slot creation
+                            Positioned.fill(
+                              top: _headerHeight,
+                              child: GestureDetector(
+                                onTapUp: (details) {
+                                  final x = details.localPosition.dx;
+                                  final hourDec = _getHourDecOfCoordinate(
+                                    x,
+                                    hourWidths,
+                                  );
+                                  final hour = hourDec.floor().clamp(0, 23);
+                                  final fracOfHour = hourDec - hour;
+                                  final minute =
+                                      ((fracOfHour * 60) / 30).round() * 30;
+                                  final finalHour = minute == 60
+                                      ? (hour + 1).clamp(0, 23)
+                                      : hour;
+                                  final finalMinute = minute == 60 ? 0 : minute;
+
+                                  final targetTime = DateTime(
+                                    _selectedDay.year,
+                                    _selectedDay.month,
+                                    _selectedDay.day,
+                                    finalHour,
+                                    finalMinute,
+                                  );
+
+                                  ItemBottomSheet.show(
+                                    context,
+                                    prefilledStart: targetTime,
+                                  );
+                                },
+                                child: Container(color: Colors.transparent),
+                              ),
+                            ),
+
+                            // Positioned chips
+                            ...positionedItems.map((pi) {
+                              final top =
+                                  _headerHeight + pi.rowIndex * _rowHeight;
+                              return Positioned(
+                                left: pi.left,
+                                width: pi.width,
+                                top: top,
+                                height: _rowHeight,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 2.0,
+                                    vertical: 3.0,
+                                  ),
+                                  child: CalendarItemChip(
+                                    item: pi.item,
+                                    onTap: () => ItemBottomSheet.show(
+                                      context,
+                                      initialItem: pi.item,
+                                    ),
+                                    onComplete: () async {
+                                      final updated = pi.item.copyWith(
+                                        isComplete: !pi.item.isComplete,
+                                        completedAt: !pi.item.isComplete
+                                            ? DateTime.now()
+                                            : null,
+                                      );
+                                      await repo.updateItem(updated);
+                                      ref
+                                          .read(googleCalendarServiceProvider)
+                                          .sync();
+                                    },
+                                  ),
+                                ),
+                              );
+                            }),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
