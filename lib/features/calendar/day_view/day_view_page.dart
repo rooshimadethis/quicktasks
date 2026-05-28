@@ -41,60 +41,108 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
   // State for hold + drag gesture creation
   int? _dragStartSlot;
   int? _dragCurrentSlot;
-  bool _isSyncing = false;
+  
+  late ScrollController _scrollController;
+  DateTime? _lastAutoScrolledDay;
 
   @override
   void initState() {
     super.initState();
     final now = DateTime.now();
     _selectedDay = DateTime(now.year, now.month, now.day);
+    _scrollController = ScrollController();
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkInitialSync();
     });
   }
 
-  Future<void> _checkInitialSync() async {
-    final dao = ref.read(calendarItemDaoProvider);
-    final hasSynced = await dao.hasAnySyncToken();
-    if (!hasSynced) {
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) {
-          return const PopScope(
-            canPop: false,
-            child: AlertDialog(
-              title: Text('INITIAL SYNC', style: TextStyle(fontWeight: FontWeight.bold)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text(
-                    'Syncing your Google Calendar events for the first time. Please wait...',
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
+  void _autoScrollToFirstEvent(List<CalendarItem> items) {
+    if (!_scrollController.hasClients) return;
+
+    double earliestHour = 8.0; // Default fallback to 8:00 AM
+    if (items.isNotEmpty) {
+      final startTimes = items
+          .map((i) => i.startAt)
+          .whereType<DateTime>()
+          .toList();
+      if (startTimes.isNotEmpty) {
+        final earliest = startTimes.reduce((a, b) => a.isBefore(b) ? a : b);
+        earliestHour = earliest.hour + earliest.minute / 60.0;
+        // Scroll 30 mins earlier to provide visual context
+        earliestHour = max(0.0, earliestHour - 0.5);
+      }
+    }
+
+    final targetOffset = earliestHour * _timelineHourHeight;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    _scrollController.jumpTo(targetOffset.clamp(0.0, maxScroll));
+    _lastAutoScrolledDay = _selectedDay;
+  }
+
+  void _showSyncingDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return PopScope(
+          canPop: false,
+          child: AlertDialog(
+            title: const Text('SYNCING CALENDAR', style: TextStyle(fontWeight: FontWeight.bold)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(message, textAlign: TextAlign.center),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _runSyncWithProgress(String message) async {
+    if (!mounted) return;
+    _showSyncingDialog(context, message);
+
+    try {
       final success = await ref.read(googleCalendarServiceProvider).sync();
 
       if (mounted) {
         Navigator.pop(context); // Dismiss dialog
-        if (!success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Initial sync failed. Please try triggering it manually.'),
-            ),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(success ? 'Sync completed successfully.' : 'Sync failed. Please try again.'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
       }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Dismiss dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Sync failed: $e'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _checkInitialSync() async {
+    final dao = ref.read(calendarItemDaoProvider);
+    final hasSynced = await dao.hasAnySyncToken();
+    if (!hasSynced) {
+      await _runSyncWithProgress('Syncing your Google Calendar events for the first time. Please wait...');
     }
   }
 
@@ -116,21 +164,7 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
   }
 
   Future<void> _triggerManualSync() async {
-    setState(() {
-      _isSyncing = true;
-    });
-    final success = await ref.read(googleCalendarServiceProvider).sync();
-    if (mounted) {
-      setState(() {
-        _isSyncing = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(success ? 'Sync completed successfully.' : 'Sync failed. Check logs.'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
+    await _runSyncWithProgress('Refreshing calendar data. Please wait...');
   }
 
   List<PositionedItem> _layoutItems(List<CalendarItem> items) {
@@ -326,9 +360,7 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
         ),
         actions: [
           IconButton(
-            icon: _isSyncing 
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.sync),
+            icon: const Icon(Icons.sync),
             onPressed: _triggerManualSync,
             tooltip: 'Sync Google Calendar',
           ),
@@ -353,6 +385,13 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
           final allDayItems = items.where((i) => i.isAllDay).toList();
           final timelineItems = items.where((i) => !i.isAllDay).toList();
           final positionedItems = _layoutItems(timelineItems);
+
+          // Schedule auto-scroll on next frame if date changed
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_lastAutoScrolledDay != _selectedDay) {
+              _autoScrollToFirstEvent(timelineItems);
+            }
+          });
 
           return Column(
             children: [
@@ -419,6 +458,7 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
               // 3. Scrollable Timeline
               Expanded(
                 child: SingleChildScrollView(
+                  controller: _scrollController,
                   child: GestureDetector(
                     onLongPressStart: (details) {
                       setState(() {

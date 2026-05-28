@@ -9,6 +9,16 @@
       "deviceId": "emulator-5554"
     },
     {
+      "name": "QuickTasks (Uninstall & Reinstall)",
+      "request": "launch",
+      "type": "dart",
+      "preLaunchTask": "Start Bigme Hibreak Pro Emulator",
+      "deviceId": "emulator-5554",
+      "args": [
+        "--uninstall-first"
+      ]
+    },
+    {
       "name": "QuickTasks (iOS Simulator)",
       "request": "launch",
       "type": "dart",

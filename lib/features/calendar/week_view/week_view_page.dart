@@ -18,7 +18,6 @@ class WeekViewPage extends ConsumerStatefulWidget {
 class _WeekViewPageState extends ConsumerState<WeekViewPage> {
   late DateTime _centerDate;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  bool _isSyncing = false;
 
   @override
   void initState() {
@@ -40,22 +39,60 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
     });
   }
 
-  Future<void> _triggerManualSync() async {
-    setState(() {
-      _isSyncing = true;
-    });
-    final success = await ref.read(googleCalendarServiceProvider).sync();
-    if (mounted) {
-      setState(() {
-        _isSyncing = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(success ? 'Sync completed successfully.' : 'Sync failed. Check logs.'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+  void _showSyncingDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return PopScope(
+          canPop: false,
+          child: AlertDialog(
+            title: const Text('SYNCING CALENDAR', style: TextStyle(fontWeight: FontWeight.bold)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(message, textAlign: TextAlign.center),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _runSyncWithProgress(String message) async {
+    if (!mounted) return;
+    _showSyncingDialog(context, message);
+
+    try {
+      final success = await ref.read(googleCalendarServiceProvider).sync();
+
+      if (mounted) {
+        Navigator.pop(context); // Dismiss dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(success ? 'Sync completed successfully.' : 'Sync failed. Please try again.'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Dismiss dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Sync failed: $e'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
+  }
+
+  Future<void> _triggerManualSync() async {
+    await _runSyncWithProgress('Refreshing calendar data. Please wait...');
   }
 
   String _getCategoryShape(TaskCategory category) {
@@ -93,9 +130,7 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
         ),
         actions: [
           IconButton(
-            icon: _isSyncing 
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.sync),
+            icon: const Icon(Icons.sync),
             onPressed: _triggerManualSync,
             tooltip: 'Sync Google Calendar',
           ),
