@@ -254,84 +254,6 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
     return list;
   }
 
-  void _showQuickRescheduleMenu(CalendarItem item) {
-    final repo = ref.read(calendarItemRepositoryProvider);
-    final syncService = ref.read(googleCalendarServiceProvider);
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return SimpleDialog(
-          title: Text('RESCHEDULE: ${item.title.toUpperCase()}'),
-          children: [
-            SimpleDialogOption(
-              onPressed: () async {
-                Navigator.pop(context);
-                if (item.startAt != null && item.endAt != null) {
-                  final updated = item.copyWith(
-                    startAt: item.startAt!.add(const Duration(minutes: 30)),
-                    endAt: item.endAt!.add(const Duration(minutes: 30)),
-                  );
-                  await repo.updateItem(updated);
-                  syncService.sync();
-                }
-              },
-              child: const Text('+30 MINUTES'),
-            ),
-            SimpleDialogOption(
-              onPressed: () async {
-                Navigator.pop(context);
-                if (item.startAt != null && item.endAt != null) {
-                  final updated = item.copyWith(
-                    startAt: item.startAt!.add(const Duration(hours: 1)),
-                    endAt: item.endAt!.add(const Duration(hours: 1)),
-                  );
-                  await repo.updateItem(updated);
-                  syncService.sync();
-                }
-              },
-              child: const Text('+1 HOUR'),
-            ),
-            SimpleDialogOption(
-              onPressed: () async {
-                Navigator.pop(context);
-                if (item.startAt != null && item.endAt != null) {
-                  final updated = item.copyWith(
-                    startAt: item.startAt!.add(const Duration(hours: 3)),
-                    endAt: item.endAt!.add(const Duration(hours: 3)),
-                  );
-                  await repo.updateItem(updated);
-                  syncService.sync();
-                }
-              },
-              child: const Text('+3 HOURS'),
-            ),
-            SimpleDialogOption(
-              onPressed: () async {
-                Navigator.pop(context);
-                if (item.startAt != null && item.endAt != null) {
-                  final updated = item.copyWith(
-                    startAt: item.startAt!.add(const Duration(days: 1)),
-                    endAt: item.endAt!.add(const Duration(days: 1)),
-                  );
-                  await repo.updateItem(updated);
-                  syncService.sync();
-                }
-              },
-              child: const Text('TOMORROW'),
-            ),
-            SimpleDialogOption(
-              onPressed: () {
-                Navigator.pop(context);
-                ItemBottomSheet.show(context, initialItem: item);
-              },
-              child: const Text('PICK TIME...'),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -615,7 +537,6 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                                   await repo.updateItem(updated);
                                   ref.read(googleCalendarServiceProvider).sync();
                                 },
-                                onReschedule: () => _showQuickRescheduleMenu(pi.item),
                               ),
                             ),
                           );

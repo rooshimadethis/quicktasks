@@ -255,6 +255,39 @@ class _ItemBottomSheetState extends ConsumerState<ItemBottomSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // 0. Header Actions (Cancel / Save / Delete)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('CANCEL'),
+                  ),
+                  Row(
+                    children: [
+                      if (widget.initialItem != null) ...[
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: theme.colorScheme.error,
+                            side: BorderSide(color: theme.colorScheme.error, width: 1.5),
+                          ),
+                          onPressed: _delete,
+                          child: const Text('DELETE'),
+                        ),
+                        const SizedBox(width: 12),
+                      ],
+                      OutlinedButton(
+                        onPressed: _save,
+                        child: const Text('SAVE'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Divider(height: 1.5),
+              const SizedBox(height: 16),
+
               // 1. Type Toggle
               Row(
                 children: [
@@ -415,34 +448,6 @@ class _ItemBottomSheetState extends ConsumerState<ItemBottomSheet> {
                 ),
                 const SizedBox(height: 24),
               ],
-
-              // 7. Save / Delete / Cancel Actions
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  if (widget.initialItem != null) ...[
-                    OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: theme.colorScheme.error,
-                        side: BorderSide(color: theme.colorScheme.error, width: 1.5),
-                      ),
-                      onPressed: _delete,
-                      child: const Text('DELETE'),
-                    ),
-                    const Spacer(),
-                  ],
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('CANCEL'),
-                  ),
-                  const SizedBox(width: 12),
-                  OutlinedButton(
-                    onPressed: _save,
-                    child: const Text('SAVE'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
             ],
           ),
         ),

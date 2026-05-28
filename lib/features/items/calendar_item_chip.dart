@@ -5,14 +5,12 @@ class CalendarItemChip extends StatelessWidget {
   final CalendarItem item;
   final VoidCallback? onTap;
   final VoidCallback? onComplete;
-  final VoidCallback? onReschedule;
 
   const CalendarItemChip({
     super.key,
     required this.item,
     this.onTap,
     this.onComplete,
-    this.onReschedule,
   });
 
   String _getCategoryShape(TaskCategory category) {
@@ -60,7 +58,7 @@ class CalendarItemChip extends StatelessWidget {
       );
     }
 
-    final childWidget = InkWell(
+    return InkWell(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
@@ -85,36 +83,6 @@ class CalendarItemChip extends StatelessWidget {
           ],
         ),
       ),
-    );
-
-    // Wrap in Dismissible for swipe-left (complete) and swipe-right (reschedule)
-    // If the item is already complete, we only allow swipe-right (reschedule)
-    return Dismissible(
-      key: Key(item.localId),
-      direction: item.isComplete ? DismissDirection.startToEnd : DismissDirection.horizontal,
-      confirmDismiss: (direction) async {
-        if (direction == DismissDirection.endToStart) {
-          // Swipe left -> Complete
-          if (onComplete != null) onComplete!();
-        } else if (direction == DismissDirection.startToEnd) {
-          // Swipe right -> Reschedule
-          if (onReschedule != null) onReschedule!();
-        }
-        return false; // Return false to not remove from tree (the update handles redraw)
-      },
-      background: Container(
-        color: theme.colorScheme.primary.withValues(alpha: 0.1),
-        alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 20.0),
-        child: const Icon(Icons.access_time, size: 28),
-      ),
-      secondaryBackground: Container(
-        color: theme.colorScheme.primary.withValues(alpha: 0.1),
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20.0),
-        child: const Icon(Icons.check, size: 28),
-      ),
-      child: childWidget,
     );
   }
 }
