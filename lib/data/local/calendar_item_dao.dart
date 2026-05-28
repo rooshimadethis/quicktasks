@@ -97,6 +97,42 @@ class CalendarItemDao {
           ..where((t) => t.calendarId.equals(calendarId)))
         .go();
   }
+
+  /// Checks if any sync token exists in the database.
+  Future<bool> hasAnySyncToken() async {
+    final list = await _db.select(_db.calendarSyncStates).get();
+    return list.isNotEmpty;
+  }
+
+  /// Streams all unscheduled backlog items, sorted by creation time (newest first).
+  Stream<List<CalendarItemEntity>> watchBacklogItems() {
+    return (_db.select(_db.calendarItems)
+          ..where((t) => t.startAt.isNull() | t.endAt.isNull())
+          ..orderBy([
+            (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)
+          ]))
+        .watch();
+  }
+
+  /// Gets all unscheduled backlog items, sorted by creation time (newest first).
+  Future<List<CalendarItemEntity>> getBacklogItems() {
+    return (_db.select(_db.calendarItems)
+          ..where((t) => t.startAt.isNull() | t.endAt.isNull())
+          ..orderBy([
+            (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)
+          ]))
+        .get();
+  }
+
+  /// Streams all incomplete tasks with a start time in the past.
+  Stream<List<CalendarItemEntity>> watchOverdueItems(DateTime now) {
+    return (_db.select(_db.calendarItems)
+          ..where((t) => t.isComplete.equals(false) & t.type.equals('task') & t.startAt.isNotNull() & t.startAt.isSmallerThanValue(now))
+          ..orderBy([
+            (t) => OrderingTerm(expression: t.startAt, mode: OrderingMode.asc)
+          ]))
+        .watch();
+  }
 }
 
 final calendarItemDaoProvider = Provider<CalendarItemDao>((ref) {

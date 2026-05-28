@@ -82,6 +82,31 @@ class CalendarItemRepository {
         .toList());
   }
 
+  /// Streams all active backlog (unscheduled) items.
+  Stream<List<CalendarItem>> watchBacklogItems() {
+    return _dao.watchBacklogItems().map((entities) => entities
+        .map(_mapEntityToModel)
+        .where((item) => item.syncStatus != SyncStatus.pendingDelete)
+        .toList());
+  }
+
+  /// Gets all active backlog (unscheduled) items.
+  Future<List<CalendarItem>> getBacklogItems() async {
+    final entities = await _dao.getBacklogItems();
+    return entities
+        .map(_mapEntityToModel)
+        .where((item) => item.syncStatus != SyncStatus.pendingDelete)
+        .toList();
+  }
+
+  /// Streams all incomplete tasks with a start time in the past.
+  Stream<List<CalendarItem>> watchOverdueItems(DateTime now) {
+    return _dao.watchOverdueItems(now).map((entities) => entities
+        .map(_mapEntityToModel)
+        .where((item) => item.syncStatus != SyncStatus.pendingDelete)
+        .toList());
+  }
+
   /// Retrieves active items in a date range.
   Future<List<CalendarItem>> getItemsInWindow(DateTime start, DateTime end) async {
     final entities = await _dao.getItemsInWindow(start, end);
@@ -154,11 +179,32 @@ class CalendarItemRepository {
     }
   }
 
+  /// Retries an asynchronous GCal API action in case of transient network/auth failures.
+  Future<T> _retry<T>(
+    Future<T> Function() action, {
+    int retries = 3,
+    Duration delay = const Duration(seconds: 1),
+  }) async {
+    int attempts = 0;
+    while (true) {
+      try {
+        return await action();
+      } catch (e) {
+        attempts++;
+        if (attempts >= retries) {
+          rethrow;
+        }
+        developer.log('Sync action failed (attempt $attempts/$retries). Retrying...', error: e);
+        await Future.delayed(delay * attempts);
+      }
+    }
+  }
+
   /// Synchronizes local SQLite cache with remote Google Calendar API.
   /// This pushes local changes and pulls new events/updates.
   Future<void> sync(GCalApiClient apiClient) async {
     // 1. Fetch Calendar List from Google Calendar
-    final calendarList = await apiClient.listCalendars();
+    final calendarList = await _retry(() => apiClient.listCalendars());
     final calendars = calendarList.items ?? [];
 
     // 2. Identify or create the dedicated "QuickTasks" calendar
@@ -171,7 +217,7 @@ class CalendarItemRepository {
     if (quicktasksEntry.id != null) {
       quicktasksCalId = quicktasksEntry.id;
     } else {
-      final newCal = await apiClient.createCalendar('QuickTasks');
+      final newCal = await _retry(() => apiClient.createCalendar('QuickTasks'));
       quicktasksCalId = newCal.id;
     }
 
@@ -210,7 +256,7 @@ class CalendarItemRepository {
 
       try {
         if (item.syncStatus == SyncStatus.pendingCreate) {
-          final responseEvent = await apiClient.insertEvent(calendarId, item.toGCalEvent());
+          final responseEvent = await _retry(() => apiClient.insertEvent(calendarId, item.toGCalEvent()));
           final syncedItem = item.copyWith(
             googleEventId: responseEvent.id,
             googleCalendarId: calendarId,
@@ -220,11 +266,11 @@ class CalendarItemRepository {
           await _dao.upsertItem(_mapModelToEntity(syncedItem));
         } else if (item.syncStatus == SyncStatus.pendingUpdate) {
           if (item.googleEventId != null) {
-            final responseEvent = await apiClient.updateEvent(
+            final responseEvent = await _retry(() => apiClient.updateEvent(
               calendarId,
               item.googleEventId!,
               item.toGCalEvent(),
-            );
+            ));
             final syncedItem = item.copyWith(
               syncStatus: SyncStatus.synced,
               updatedAt: responseEvent.updated?.toLocal() ?? DateTime.now(),
@@ -233,7 +279,7 @@ class CalendarItemRepository {
           }
         } else if (item.syncStatus == SyncStatus.pendingDelete) {
           if (item.googleEventId != null) {
-            await apiClient.deleteEvent(calendarId, item.googleEventId!);
+            await _retry(() => apiClient.deleteEvent(calendarId, item.googleEventId!));
           }
           await _dao.deleteItem(item.localId);
         }
@@ -257,7 +303,7 @@ class CalendarItemRepository {
 
       if (storedToken != null) {
         try {
-          eventsResponse = await apiClient.listEvents(calendarId, syncToken: storedToken);
+          eventsResponse = await _retry(() => apiClient.listEvents(calendarId, syncToken: storedToken));
         } catch (e) {
           // GCal returns 410 Gone if a syncToken has expired or is invalid.
           if (e.toString().contains('410') || e.toString().contains('gone')) {
@@ -352,7 +398,7 @@ class CalendarItemRepository {
     final now = DateTime.now();
     final timeMin = now.subtract(const Duration(days: 14)); // -2 weeks
     final timeMax = now.add(const Duration(days: 56));      // +8 weeks
-    return await apiClient.listEvents(calendarId, timeMin: timeMin, timeMax: timeMax);
+    return await _retry(() => apiClient.listEvents(calendarId, timeMin: timeMin, timeMax: timeMax));
   }
 }
 

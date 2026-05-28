@@ -30,7 +30,9 @@ class GoogleCalendarSyncService {
 }
 
 /// Provider for GoogleCalendarSyncService.
-final googleCalendarServiceProvider = Provider<GoogleCalendarSyncService>((ref) {
+final googleCalendarServiceProvider = Provider<GoogleCalendarSyncService>((
+  ref,
+) {
   final repository = ref.watch(calendarItemRepositoryProvider);
   return GoogleCalendarSyncService(repository, ref);
 });

@@ -2,18 +2,11 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "QuickTasks (Pixel 9)",
+      "name": "QuickTasks (Bigme Hibreak Pro)",
       "request": "launch",
       "type": "dart",
-      "preLaunchTask": "Start Pixel 9 Emulator",
-      "deviceId": "android"
-    },
-    {
-      "name": "QuickTasks (Pixel 9 Pro Fold)",
-      "request": "launch",
-      "type": "dart",
-      "preLaunchTask": "Start Pixel 9 Pro Fold Emulator",
-      "deviceId": "android"
+      "preLaunchTask": "Start Bigme Hibreak Pro Emulator",
+      "deviceId": "emulator-5554"
     },
     {
       "name": "QuickTasks (iOS Simulator)",

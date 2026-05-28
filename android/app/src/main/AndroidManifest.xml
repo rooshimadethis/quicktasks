@@ -3,7 +3,7 @@
     <uses-permission android:name="android.permission.INTERNET"/>
 
     <!-- Note on Google Sign-In OAuth client ID on Android:
-         The Google Cloud Platform OAuth client ID for Android (317034685883-dvmomfl9j6pjgfm71a0o1q6jjcmqdl.apps.googleusercontent.com)
+         The Google Cloud Platform OAuth client ID for Android (317034685883-dvmomrhfl9j6pjgfm71a0o1q6jjcmqdl.apps.googleusercontent.com)
          is linked to the package name "me.rooshi.quicktasks" and the debug SHA-1 certificate fingerprint.
          No explicit XML wiring is needed as the Google Play Services SDK automatically maps and retrieves this on Android. -->
 

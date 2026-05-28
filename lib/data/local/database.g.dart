@@ -92,18 +92,18 @@ class $CalendarItemsTable extends CalendarItems
   late final GeneratedColumn<DateTime> startAt = GeneratedColumn<DateTime>(
     'start_at',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _endAtMeta = const VerificationMeta('endAt');
   @override
   late final GeneratedColumn<DateTime> endAt = GeneratedColumn<DateTime>(
     'end_at',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _isAllDayMeta = const VerificationMeta(
     'isAllDay',
@@ -288,16 +288,12 @@ class $CalendarItemsTable extends CalendarItems
         _startAtMeta,
         startAt.isAcceptableOrUnknown(data['start_at']!, _startAtMeta),
       );
-    } else if (isInserting) {
-      context.missing(_startAtMeta);
     }
     if (data.containsKey('end_at')) {
       context.handle(
         _endAtMeta,
         endAt.isAcceptableOrUnknown(data['end_at']!, _endAtMeta),
       );
-    } else if (isInserting) {
-      context.missing(_endAtMeta);
     }
     if (data.containsKey('is_all_day')) {
       context.handle(
@@ -396,11 +392,11 @@ class $CalendarItemsTable extends CalendarItems
       startAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}start_at'],
-      )!,
+      ),
       endAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}end_at'],
-      )!,
+      ),
       isAllDay: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_all_day'],
@@ -447,8 +443,8 @@ class CalendarItemEntity extends DataClass
   final String? googleEventId;
   final String googleCalendarId;
   final bool isExternalEvent;
-  final DateTime startAt;
-  final DateTime endAt;
+  final DateTime? startAt;
+  final DateTime? endAt;
   final bool isAllDay;
   final bool isComplete;
   final DateTime? completedAt;
@@ -464,8 +460,8 @@ class CalendarItemEntity extends DataClass
     this.googleEventId,
     required this.googleCalendarId,
     required this.isExternalEvent,
-    required this.startAt,
-    required this.endAt,
+    this.startAt,
+    this.endAt,
     required this.isAllDay,
     required this.isComplete,
     this.completedAt,
@@ -488,8 +484,12 @@ class CalendarItemEntity extends DataClass
     }
     map['google_calendar_id'] = Variable<String>(googleCalendarId);
     map['is_external_event'] = Variable<bool>(isExternalEvent);
-    map['start_at'] = Variable<DateTime>(startAt);
-    map['end_at'] = Variable<DateTime>(endAt);
+    if (!nullToAbsent || startAt != null) {
+      map['start_at'] = Variable<DateTime>(startAt);
+    }
+    if (!nullToAbsent || endAt != null) {
+      map['end_at'] = Variable<DateTime>(endAt);
+    }
     map['is_all_day'] = Variable<bool>(isAllDay);
     map['is_complete'] = Variable<bool>(isComplete);
     if (!nullToAbsent || completedAt != null) {
@@ -515,8 +515,12 @@ class CalendarItemEntity extends DataClass
           : Value(googleEventId),
       googleCalendarId: Value(googleCalendarId),
       isExternalEvent: Value(isExternalEvent),
-      startAt: Value(startAt),
-      endAt: Value(endAt),
+      startAt: startAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(startAt),
+      endAt: endAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endAt),
       isAllDay: Value(isAllDay),
       isComplete: Value(isComplete),
       completedAt: completedAt == null && nullToAbsent
@@ -542,8 +546,8 @@ class CalendarItemEntity extends DataClass
       googleEventId: serializer.fromJson<String?>(json['googleEventId']),
       googleCalendarId: serializer.fromJson<String>(json['googleCalendarId']),
       isExternalEvent: serializer.fromJson<bool>(json['isExternalEvent']),
-      startAt: serializer.fromJson<DateTime>(json['startAt']),
-      endAt: serializer.fromJson<DateTime>(json['endAt']),
+      startAt: serializer.fromJson<DateTime?>(json['startAt']),
+      endAt: serializer.fromJson<DateTime?>(json['endAt']),
       isAllDay: serializer.fromJson<bool>(json['isAllDay']),
       isComplete: serializer.fromJson<bool>(json['isComplete']),
       completedAt: serializer.fromJson<DateTime?>(json['completedAt']),
@@ -564,8 +568,8 @@ class CalendarItemEntity extends DataClass
       'googleEventId': serializer.toJson<String?>(googleEventId),
       'googleCalendarId': serializer.toJson<String>(googleCalendarId),
       'isExternalEvent': serializer.toJson<bool>(isExternalEvent),
-      'startAt': serializer.toJson<DateTime>(startAt),
-      'endAt': serializer.toJson<DateTime>(endAt),
+      'startAt': serializer.toJson<DateTime?>(startAt),
+      'endAt': serializer.toJson<DateTime?>(endAt),
       'isAllDay': serializer.toJson<bool>(isAllDay),
       'isComplete': serializer.toJson<bool>(isComplete),
       'completedAt': serializer.toJson<DateTime?>(completedAt),
@@ -584,8 +588,8 @@ class CalendarItemEntity extends DataClass
     Value<String?> googleEventId = const Value.absent(),
     String? googleCalendarId,
     bool? isExternalEvent,
-    DateTime? startAt,
-    DateTime? endAt,
+    Value<DateTime?> startAt = const Value.absent(),
+    Value<DateTime?> endAt = const Value.absent(),
     bool? isAllDay,
     bool? isComplete,
     Value<DateTime?> completedAt = const Value.absent(),
@@ -603,8 +607,8 @@ class CalendarItemEntity extends DataClass
         : this.googleEventId,
     googleCalendarId: googleCalendarId ?? this.googleCalendarId,
     isExternalEvent: isExternalEvent ?? this.isExternalEvent,
-    startAt: startAt ?? this.startAt,
-    endAt: endAt ?? this.endAt,
+    startAt: startAt.present ? startAt.value : this.startAt,
+    endAt: endAt.present ? endAt.value : this.endAt,
     isAllDay: isAllDay ?? this.isAllDay,
     isComplete: isComplete ?? this.isComplete,
     completedAt: completedAt.present ? completedAt.value : this.completedAt,
@@ -720,8 +724,8 @@ class CalendarItemsCompanion extends UpdateCompanion<CalendarItemEntity> {
   final Value<String?> googleEventId;
   final Value<String> googleCalendarId;
   final Value<bool> isExternalEvent;
-  final Value<DateTime> startAt;
-  final Value<DateTime> endAt;
+  final Value<DateTime?> startAt;
+  final Value<DateTime?> endAt;
   final Value<bool> isAllDay;
   final Value<bool> isComplete;
   final Value<DateTime?> completedAt;
@@ -757,8 +761,8 @@ class CalendarItemsCompanion extends UpdateCompanion<CalendarItemEntity> {
     this.googleEventId = const Value.absent(),
     required String googleCalendarId,
     required bool isExternalEvent,
-    required DateTime startAt,
-    required DateTime endAt,
+    this.startAt = const Value.absent(),
+    this.endAt = const Value.absent(),
     required bool isAllDay,
     required bool isComplete,
     this.completedAt = const Value.absent(),
@@ -772,8 +776,6 @@ class CalendarItemsCompanion extends UpdateCompanion<CalendarItemEntity> {
        type = Value(type),
        googleCalendarId = Value(googleCalendarId),
        isExternalEvent = Value(isExternalEvent),
-       startAt = Value(startAt),
-       endAt = Value(endAt),
        isAllDay = Value(isAllDay),
        isComplete = Value(isComplete),
        category = Value(category),
@@ -828,8 +830,8 @@ class CalendarItemsCompanion extends UpdateCompanion<CalendarItemEntity> {
     Value<String?>? googleEventId,
     Value<String>? googleCalendarId,
     Value<bool>? isExternalEvent,
-    Value<DateTime>? startAt,
-    Value<DateTime>? endAt,
+    Value<DateTime?>? startAt,
+    Value<DateTime?>? endAt,
     Value<bool>? isAllDay,
     Value<bool>? isComplete,
     Value<DateTime?>? completedAt,
@@ -1248,8 +1250,8 @@ typedef $$CalendarItemsTableCreateCompanionBuilder =
       Value<String?> googleEventId,
       required String googleCalendarId,
       required bool isExternalEvent,
-      required DateTime startAt,
-      required DateTime endAt,
+      Value<DateTime?> startAt,
+      Value<DateTime?> endAt,
       required bool isAllDay,
       required bool isComplete,
       Value<DateTime?> completedAt,
@@ -1268,8 +1270,8 @@ typedef $$CalendarItemsTableUpdateCompanionBuilder =
       Value<String?> googleEventId,
       Value<String> googleCalendarId,
       Value<bool> isExternalEvent,
-      Value<DateTime> startAt,
-      Value<DateTime> endAt,
+      Value<DateTime?> startAt,
+      Value<DateTime?> endAt,
       Value<bool> isAllDay,
       Value<bool> isComplete,
       Value<DateTime?> completedAt,
@@ -1574,8 +1576,8 @@ class $$CalendarItemsTableTableManager
                 Value<String?> googleEventId = const Value.absent(),
                 Value<String> googleCalendarId = const Value.absent(),
                 Value<bool> isExternalEvent = const Value.absent(),
-                Value<DateTime> startAt = const Value.absent(),
-                Value<DateTime> endAt = const Value.absent(),
+                Value<DateTime?> startAt = const Value.absent(),
+                Value<DateTime?> endAt = const Value.absent(),
                 Value<bool> isAllDay = const Value.absent(),
                 Value<bool> isComplete = const Value.absent(),
                 Value<DateTime?> completedAt = const Value.absent(),
@@ -1612,8 +1614,8 @@ class $$CalendarItemsTableTableManager
                 Value<String?> googleEventId = const Value.absent(),
                 required String googleCalendarId,
                 required bool isExternalEvent,
-                required DateTime startAt,
-                required DateTime endAt,
+                Value<DateTime?> startAt = const Value.absent(),
+                Value<DateTime?> endAt = const Value.absent(),
                 required bool isAllDay,
                 required bool isComplete,
                 Value<DateTime?> completedAt = const Value.absent(),

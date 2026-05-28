@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:developer' as developer;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -7,7 +8,9 @@ import 'package:quicktasks/data/remote/gcal_api_client.dart';
 /// Provider for the GoogleSignIn configurations.
 final googleSignInProvider = Provider<GoogleSignIn>((ref) {
   return GoogleSignIn(
-    clientId: '317034685883-dvmomfl9j6pjgfm71a0o1q6jjcmqdl.apps.googleusercontent.com',
+    clientId: Platform.isAndroid
+        ? null
+        : '317034685883-dvmomrhfl9j6pjgfm71a0o1q6jjcmqdl.apps.googleusercontent.com',
     scopes: [cal.CalendarApi.calendarScope],
   );
 });
@@ -26,7 +29,11 @@ class GoogleAuthNotifier extends StateNotifier<GoogleSignInAccount?> {
       final account = await _googleSignIn.signInSilently();
       state = account;
     } catch (e, stack) {
-      developer.log('Google silent sign-in failed', error: e, stackTrace: stack);
+      developer.log(
+        'Google silent sign-in failed',
+        error: e,
+        stackTrace: stack,
+      );
     }
   }
 
@@ -39,7 +46,11 @@ class GoogleAuthNotifier extends StateNotifier<GoogleSignInAccount?> {
         return true;
       }
     } catch (e, stack) {
-      developer.log('Google interactive sign-in error', error: e, stackTrace: stack);
+      developer.log(
+        'Google interactive sign-in error',
+        error: e,
+        stackTrace: stack,
+      );
     }
     return false;
   }
@@ -58,9 +69,9 @@ class GoogleAuthNotifier extends StateNotifier<GoogleSignInAccount?> {
 /// Provider that exposes the current signed-in Google account (if any).
 final googleAuthNotifierProvider =
     StateNotifierProvider<GoogleAuthNotifier, GoogleSignInAccount?>((ref) {
-  final signIn = ref.watch(googleSignInProvider);
-  return GoogleAuthNotifier(signIn);
-});
+      final signIn = ref.watch(googleSignInProvider);
+      return GoogleAuthNotifier(signIn);
+    });
 
 /// Provider for the async OAuth headers (e.g. auth tokens).
 final authHeadersProvider = FutureProvider<Map<String, String>?>((ref) async {
@@ -81,7 +92,11 @@ final gcalApiClientProvider = Provider<GCalApiClient?>((ref) {
     },
     loading: () => null,
     error: (err, stack) {
-      developer.log('Error loading auth headers for API client', error: err, stackTrace: stack);
+      developer.log(
+        'Error loading auth headers for API client',
+        error: err,
+        stackTrace: stack,
+      );
       return null;
     },
   );

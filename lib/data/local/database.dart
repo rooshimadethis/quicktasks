@@ -18,8 +18,8 @@ class CalendarItems extends Table {
   TextColumn get googleEventId => text().nullable()();
   TextColumn get googleCalendarId => text()();
   BoolColumn get isExternalEvent => boolean()();
-  DateTimeColumn get startAt => dateTime()();
-  DateTimeColumn get endAt => dateTime()();
+  DateTimeColumn get startAt => dateTime().nullable()();
+  DateTimeColumn get endAt => dateTime().nullable()();
   BoolColumn get isAllDay => boolean()();
   BoolColumn get isComplete => boolean()();
   DateTimeColumn get completedAt => dateTime().nullable()();
@@ -47,7 +47,19 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) async {
+          await m.createAll();
+        },
+        onUpgrade: (m, from, to) async {
+          await m.drop(calendarItems);
+          await m.drop(calendarSyncStates);
+          await m.createAll();
+        },
+      );
 }
 
 LazyDatabase _openConnection() {

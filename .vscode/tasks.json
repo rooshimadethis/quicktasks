@@ -2,19 +2,9 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Start Pixel 9 Emulator",
+      "label": "Start Bigme Hibreak Pro Emulator",
       "type": "shell",
-      "command": "flutter emulators --launch Pixel_9",
-      "presentation": {
-        "reveal": "silent",
-        "panel": "new"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Start Pixel 9 Pro Fold Emulator",
-      "type": "shell",
-      "command": "flutter emulators --launch Pixel_9_Pro_Fold_2",
+      "command": "flutter emulators --launch Bigme_Hibreak_Pro || true",
       "presentation": {
         "reveal": "silent",
         "panel": "new"

@@ -143,6 +143,19 @@ Normal/dark theme is Phase 2. Do not add color, gradients, shadows, or animation
 
 ---
 
+## MVP Task Progress
+
+- [x] Database & Models Support for Backlog
+- [x] App Foundation & Styling (Paper Mode & Router)
+- [x] Core View Implementations:
+  - [x] Day View (30-min timeline, gestures, swipes)
+  - [x] Week View (5-column scroll)
+  - [x] Overdue Tray & Backlog Drawer
+  - [x] Item Bottom Sheet (Create/Edit)
+- [x] Verification & Bug Fixes
+
+---
+
 ## What's Deferred (Do Not Build Yet)
 
 - Phase 2: NLP quick capture, dark/AMOLED theme, drag from backlog onto timeline, notifications, recurring tasks, Firebase backup, GCal push notifications

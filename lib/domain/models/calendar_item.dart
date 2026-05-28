@@ -14,8 +14,8 @@ class CalendarItem {
   final String? googleEventId;       // GCal event ID (null while pending sync)
   final String googleCalendarId;     // "quicktasks" | external calendar ID
   final bool isExternalEvent;        // true = from another calendar, not QuickTasks
-  final DateTime startAt;
-  final DateTime endAt;              // For tasks: startAt + 30min default
+  final DateTime? startAt;
+  final DateTime? endAt;              // For tasks: startAt + 30min default
   final bool isAllDay;
   final bool isComplete;             // Stored in extendedProperties + local SQLite
   final DateTime? completedAt;
@@ -32,8 +32,8 @@ class CalendarItem {
     this.googleEventId,
     required this.googleCalendarId,
     required this.isExternalEvent,
-    required this.startAt,
-    required this.endAt,
+    this.startAt,
+    this.endAt,
     required this.isAllDay,
     required this.isComplete,
     this.completedAt,
@@ -81,6 +81,28 @@ class CalendarItem {
     );
   }
 
+  /// Returns a new `CalendarItem` with its schedule cleared (unscheduled backlog item).
+  CalendarItem toUnscheduled() {
+    return CalendarItem(
+      localId: localId,
+      title: title,
+      description: description,
+      type: type,
+      googleEventId: googleEventId,
+      googleCalendarId: googleCalendarId,
+      isExternalEvent: isExternalEvent,
+      startAt: null,
+      endAt: null,
+      isAllDay: isAllDay,
+      isComplete: isComplete,
+      completedAt: completedAt,
+      category: category,
+      syncStatus: syncStatus,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
+
   /// Converts a Google Calendar API `Event` into a `CalendarItem`.
   factory CalendarItem.fromGCalEvent(
     cal.Event event,
@@ -107,23 +129,28 @@ class CalendarItem {
       orElse: () => TaskCategory.none,
     );
 
+    // Check if it is a backlog/unscheduled task
+    final isBacklogProp = privateProps['isBacklog'] ?? 'false';
+
     // DateTimes
-    DateTime start = DateTime.now();
-    DateTime end = DateTime.now().add(const Duration(minutes: 30));
+    DateTime? start;
+    DateTime? end;
     bool isAllDay = false;
 
-    if (event.start?.dateTime != null) {
-      start = event.start!.dateTime!.toLocal();
-    } else if (event.start?.date != null) {
-      start = event.start!.date!.toLocal();
-      isAllDay = true;
-    }
+    if (isBacklogProp != 'true') {
+      if (event.start?.dateTime != null) {
+        start = event.start!.dateTime!.toLocal();
+      } else if (event.start?.date != null) {
+        start = event.start!.date!.toLocal();
+        isAllDay = true;
+      }
 
-    if (event.end?.dateTime != null) {
-      end = event.end!.dateTime!.toLocal();
-    } else if (event.end?.date != null) {
-      end = event.end!.date!.toLocal();
-      isAllDay = true;
+      if (event.end?.dateTime != null) {
+        end = event.end!.dateTime!.toLocal();
+      } else if (event.end?.date != null) {
+        end = event.end!.date!.toLocal();
+        isAllDay = true;
+      }
     }
 
     final created = event.created ?? DateTime.now();
@@ -156,17 +183,27 @@ class CalendarItem {
     event.summary = title;
     event.description = description;
 
-    if (isAllDay) {
-      // For all-day events, GCal expects date strings 'YYYY-MM-DD'
-      event.start = cal.EventDateTime(
-        date: DateTime(startAt.year, startAt.month, startAt.day),
-      );
-      event.end = cal.EventDateTime(
-        date: DateTime(endAt.year, endAt.month, endAt.day),
-      );
+    final isBacklog = startAt == null || endAt == null;
+
+    if (isBacklog) {
+      // Dummy date-time for GCal API (which requires start/end)
+      final dummyStart = DateTime.utc(1970, 1, 1, 0, 0, 0);
+      final dummyEnd = DateTime.utc(1970, 1, 1, 0, 30, 0);
+      event.start = cal.EventDateTime(dateTime: dummyStart);
+      event.end = cal.EventDateTime(dateTime: dummyEnd);
     } else {
-      event.start = cal.EventDateTime(dateTime: startAt.toUtc());
-      event.end = cal.EventDateTime(dateTime: endAt.toUtc());
+      if (isAllDay) {
+        // For all-day events, GCal expects date strings 'YYYY-MM-DD'
+        event.start = cal.EventDateTime(
+          date: DateTime(startAt!.year, startAt!.month, startAt!.day),
+        );
+        event.end = cal.EventDateTime(
+          date: DateTime(endAt!.year, endAt!.month, endAt!.day),
+        );
+      } else {
+        event.start = cal.EventDateTime(dateTime: startAt!.toUtc());
+        event.end = cal.EventDateTime(dateTime: endAt!.toUtc());
+      }
     }
 
     // Set private properties for completion & task metadata
@@ -176,6 +213,7 @@ class CalendarItem {
         'isComplete': isComplete ? 'true' : 'false',
         if (completedAt != null) 'completedAt': completedAt!.toUtc().toIso8601String(),
         'category': category.name,
+        'isBacklog': isBacklog ? 'true' : 'false',
       },
     );
 
