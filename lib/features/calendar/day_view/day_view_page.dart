@@ -656,7 +656,7 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                                     border: Border(
                                       right: BorderSide(
                                         color: theme.colorScheme.primary
-                                            .withValues(alpha: 0.15),
+                                            .withValues(alpha: 0.45),
                                         width: 1.0,
                                       ),
                                     ),

@@ -2,14 +2,20 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "QuickTasks (Bigme Hibreak Pro)",
+      "name": "QuickTasks (Bigme Hibreak Pro Emulator)",
       "request": "launch",
       "type": "dart",
       "preLaunchTask": "Start Bigme Hibreak Pro Emulator",
       "deviceId": "emulator-5554"
     },
     {
-      "name": "QuickTasks (Uninstall & Reinstall)",
+      "name": "QuickTasks (Bigme Hibreak Pro Phone)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "B651DNW2FLKB006000379"
+    },
+    {
+      "name": "QuickTasks (Emulator Uninstall & Reinstall)",
       "request": "launch",
       "type": "dart",
       "preLaunchTask": "Start Bigme Hibreak Pro Emulator",
