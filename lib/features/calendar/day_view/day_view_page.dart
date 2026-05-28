@@ -47,6 +47,13 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
   // Timer for drag auto scrolling
   Timer? _autoScrollTimer;
 
+  Timer? _timeIndicatorTimer;
+
+  bool _isToday(DateTime day) {
+    final now = DateTime.now();
+    return day.year == now.year && day.month == now.month && day.day == now.day;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -57,11 +64,19 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkInitialSync();
     });
+
+    // Update time indicator periodically
+    _timeIndicatorTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (mounted && _isToday(_selectedDay)) {
+        setState(() {});
+      }
+    });
   }
 
   @override
   void dispose() {
     _stopAutoScroll();
+    _timeIndicatorTimer?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -412,6 +427,14 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
           final hourWidths = _calculateHourWidths(timelineItems);
           final positionedItems = _layoutItems(timelineItems, hourWidths);
 
+          final isToday = _isToday(_selectedDay);
+          double? currentX;
+          if (isToday) {
+            final now = DateTime.now();
+            final nowDec = now.hour + now.minute / 60.0 + now.second / 3600.0;
+            currentX = _getCoordinateOfHour(nowDec, hourWidths);
+          }
+
           // Schedule auto-scroll on next frame if date changed
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (_lastAutoScrolledDay != _selectedDay) {
@@ -714,6 +737,30 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                                 ),
                               );
                             }),
+
+                            if (isToday && currentX != null) ...[
+                              Positioned(
+                                left: currentX - 0.75,
+                                top: 0,
+                                bottom: 0,
+                                child: Container(
+                                  width: 1.5,
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                              Positioned(
+                                left: currentX - 4.0,
+                                top: _headerHeight - 4.0,
+                                child: Container(
+                                  width: 8.0,
+                                  height: 8.0,
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.primary,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       );
