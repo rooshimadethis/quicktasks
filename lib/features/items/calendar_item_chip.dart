@@ -41,18 +41,15 @@ class CalendarItemChip extends StatelessWidget {
       decorationThickness: 2.0,
     );
 
-    // Build the leading checkmark toggle for tasks
-    Widget? leadingWidget;
-    if (isTask) {
-      leadingWidget = SizedBox(
-        width: 32,
-        height: 32,
-        child: Checkbox(
-          value: item.isComplete,
-          onChanged: (_) => onComplete?.call(),
-        ),
-      );
-    }
+    // Build the leading checkmark toggle for both tasks and events
+    final leadingWidget = SizedBox(
+      width: 32,
+      height: 32,
+      child: Checkbox(
+        value: item.isComplete,
+        onChanged: (_) => onComplete?.call(),
+      ),
+    );
 
     // Build external event indicator badge
     Widget? trailingWidget;
@@ -74,10 +71,8 @@ class CalendarItemChip extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 56.0), // minimum tap target 56dp
         child: Row(
           children: [
-            if (leadingWidget != null) ...[
-              leadingWidget,
-              const SizedBox(width: 8),
-            ],
+            leadingWidget,
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 '$categoryShape${item.title}',
@@ -93,19 +88,10 @@ class CalendarItemChip extends StatelessWidget {
     );
 
     // Wrap in Dismissible for swipe-left (complete) and swipe-right (reschedule)
-    // Only incomplete tasks can be completed via swipe.
-    // Events cannot be marked complete, but maybe can be rescheduled via swipe-right?
-    // Let's enable swipe-right (reschedule) for both tasks and events, but swipe-left (complete) only for tasks.
-    final enableSwipe = isTask || !item.isComplete;
-    if (!enableSwipe) {
-      return childWidget;
-    }
-
+    // If the item is already complete, we only allow swipe-right (reschedule)
     return Dismissible(
       key: Key(item.localId),
-      direction: isTask
-          ? (item.isComplete ? DismissDirection.startToEnd : DismissDirection.horizontal)
-          : DismissDirection.startToEnd, // Events only swipe right (reschedule)
+      direction: item.isComplete ? DismissDirection.startToEnd : DismissDirection.horizontal,
       confirmDismiss: (direction) async {
         if (direction == DismissDirection.endToStart) {
           // Swipe left -> Complete

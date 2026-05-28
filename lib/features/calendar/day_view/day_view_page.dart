@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:quicktasks/domain/models/calendar_item.dart';
 import 'package:quicktasks/domain/repositories/calendar_item_repository.dart';
-import 'package:quicktasks/features/backlog/backlog_drawer.dart';
+import 'package:quicktasks/features/backlog/backlog_tray_widget.dart';
 import 'package:quicktasks/features/calendar/day_view/overdue_tray_widget.dart';
 import 'package:quicktasks/features/items/calendar_item_chip.dart';
 import 'package:quicktasks/features/items/item_bottom_sheet.dart';
@@ -354,10 +354,6 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
       key: _scaffoldKey,
       appBar: AppBar(
         title: Text(dateStr, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.sync),
@@ -377,7 +373,6 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
           const SizedBox(width: 8),
         ],
       ),
-      drawer: const BacklogDrawer(),
       body: StreamBuilder<List<CalendarItem>>(
         stream: itemsStream,
         builder: (context, snapshot) {
@@ -518,7 +513,7 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                             );
 
                             return DragTarget<CalendarItem>(
-                              onWillAcceptWithDetails: (details) => details.data.type == CalendarItemType.task,
+                              onWillAcceptWithDetails: (details) => true,
                               onAcceptWithDetails: (details) async {
                                 final item = details.data;
                                 final duration = item.endAt != null && item.startAt != null
@@ -631,8 +626,9 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                 ),
               ),
 
-              // 4. Overdue tray anchored at the bottom
+              // 4. Overdue and Backlog trays anchored at the bottom
               const OverdueTrayWidget(),
+              const BacklogTrayWidget(),
             ],
           );
         },

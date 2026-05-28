@@ -3,16 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quicktasks/domain/models/calendar_item.dart';
 import 'package:quicktasks/domain/repositories/calendar_item_repository.dart';
 import 'package:quicktasks/features/items/item_bottom_sheet.dart';
-import 'package:quicktasks/features/sync/google_calendar_service.dart';
 
-class OverdueTrayWidget extends ConsumerStatefulWidget {
-  const OverdueTrayWidget({super.key});
+class BacklogTrayWidget extends ConsumerWidget {
+  const BacklogTrayWidget({super.key});
 
-  @override
-  ConsumerState<OverdueTrayWidget> createState() => _OverdueTrayWidgetState();
-}
-
-class _OverdueTrayWidgetState extends ConsumerState<OverdueTrayWidget> {
   String _getCategoryShape(TaskCategory category) {
     switch (category) {
       case TaskCategory.work:
@@ -27,15 +21,13 @@ class _OverdueTrayWidgetState extends ConsumerState<OverdueTrayWidget> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final repo = ref.watch(calendarItemRepositoryProvider);
-    final now = DateTime.now();
-    final startOfToday = DateTime(now.year, now.month, now.day);
-    final overdueStream = repo.watchOverdueItems(startOfToday);
+    final backlogStream = repo.watchBacklogItems();
 
     return StreamBuilder<List<CalendarItem>>(
-      stream: overdueStream,
+      stream: backlogStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox.shrink();
@@ -62,7 +54,7 @@ class _OverdueTrayWidgetState extends ConsumerState<OverdueTrayWidget> {
               Row(
                 children: [
                   const Text(
-                    '⚠️ OVERDUE ITEMS',
+                    '📥 BACKLOG (UNSCHEDULED)',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 0.5),
                   ),
                   const SizedBox(width: 8),
@@ -73,14 +65,12 @@ class _OverdueTrayWidgetState extends ConsumerState<OverdueTrayWidget> {
                 ],
               ),
               const SizedBox(height: 8),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 160),
+              SizedBox(
+                height: 50,
                 child: ListView.separated(
-                  shrinkWrap: true,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  scrollDirection: Axis.vertical,
+                  scrollDirection: Axis.horizontal,
                   itemCount: items.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 6),
+                  separatorBuilder: (context, index) => const SizedBox(width: 8),
                   itemBuilder: (context, index) {
                     final item = items[index];
                     final categoryShape = _getCategoryShape(item.category);
@@ -94,26 +84,14 @@ class _OverdueTrayWidgetState extends ConsumerState<OverdueTrayWidget> {
                         child: Opacity(
                           opacity: 0.85,
                           child: Container(
-                            width: MediaQuery.of(context).size.width - 32,
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             decoration: BoxDecoration(
                               color: theme.scaffoldBackgroundColor,
                               border: Border.all(color: theme.colorScheme.primary, width: 1.5),
                             ),
-                            child: Row(
-                              children: [
-                                Checkbox(
-                                  value: item.isComplete,
-                                  onChanged: null,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    '$categoryShape${item.title}',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                                  ),
-                                ),
-                              ],
+                            child: Text(
+                              '$categoryShape${item.title}',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                             ),
                           ),
                         ),
@@ -121,66 +99,31 @@ class _OverdueTrayWidgetState extends ConsumerState<OverdueTrayWidget> {
                       childWhenDragging: Opacity(
                         opacity: 0.3,
                         child: Container(
-                          padding: const EdgeInsets.all(10.0),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
                             border: Border.all(color: theme.colorScheme.primary, width: 1.5),
                           ),
-                          child: Row(
-                            children: [
-                              Checkbox(
-                                value: item.isComplete,
-                                onChanged: null,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  '$categoryShape${item.title}',
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              ),
-                            ],
+                          alignment: Alignment.center,
+                          child: Text(
+                            '$categoryShape${item.title}',
+                            style: const TextStyle(fontSize: 12),
                           ),
                         ),
                       ),
                       child: InkWell(
                         onTap: () {
-                          // Tap opens the quick reschedule sheet / full edit sheet
+                          // Tap opens the edit bottom sheet where the user can schedule it
                           ItemBottomSheet.show(context, initialItem: item);
                         },
                         child: Container(
-                          padding: const EdgeInsets.all(10.0),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
                             border: Border.all(color: theme.colorScheme.primary, width: 1.5),
                           ),
-                          child: Row(
-                            children: [
-                              SizedBox(
-                                width: 32,
-                                height: 32,
-                                child: Checkbox(
-                                  value: item.isComplete,
-                                  onChanged: (val) async {
-                                    if (val != null) {
-                                      final updated = item.copyWith(
-                                        isComplete: val,
-                                        completedAt: val ? DateTime.now() : null,
-                                      );
-                                      await repo.updateItem(updated);
-                                      ref.read(googleCalendarServiceProvider).sync();
-                                    }
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  '$categoryShape${item.title}',
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
+                          alignment: Alignment.center,
+                          child: Text(
+                            '$categoryShape${item.title}',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                           ),
                         ),
                       ),

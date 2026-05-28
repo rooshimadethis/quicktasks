@@ -124,12 +124,12 @@ class CalendarItemDao {
         .get();
   }
 
-  /// Streams all incomplete tasks with a start time in the past.
+  /// Streams all incomplete items with a start time in the past.
   Stream<List<CalendarItemEntity>> watchOverdueItems(DateTime now) {
     return (_db.select(_db.calendarItems)
-          ..where((t) => t.isComplete.equals(false) & t.type.equals('task') & t.startAt.isNotNull() & t.startAt.isSmallerThanValue(now))
+          ..where((t) => t.isComplete.equals(false) & t.startAt.isNotNull() & t.startAt.isSmallerThanValue(now))
           ..orderBy([
-            (t) => OrderingTerm(expression: t.startAt, mode: OrderingMode.asc)
+            (t) => OrderingTerm(expression: t.startAt, mode: OrderingMode.desc)
           ]))
         .watch();
   }

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:quicktasks/domain/models/calendar_item.dart';
 import 'package:quicktasks/domain/repositories/calendar_item_repository.dart';
-import 'package:quicktasks/features/backlog/backlog_drawer.dart';
+import 'package:quicktasks/features/backlog/backlog_tray_widget.dart';
 import 'package:quicktasks/features/calendar/day_view/overdue_tray_widget.dart';
 import 'package:quicktasks/features/items/item_bottom_sheet.dart';
 import 'package:quicktasks/features/sync/google_calendar_service.dart';
@@ -124,10 +124,6 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
       key: _scaffoldKey,
       appBar: AppBar(
         title: const Text('WEEK VIEW', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 0.5)),
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.sync),
@@ -147,7 +143,6 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
           const SizedBox(width: 8),
         ],
       ),
-      drawer: const BacklogDrawer(),
       body: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onHorizontalDragEnd: (details) {
@@ -296,8 +291,9 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
               ),
             ),
 
-            // Overdue Tray at the bottom
+            // Overdue and Backlog Trays at the bottom
             const OverdueTrayWidget(),
+            const BacklogTrayWidget(),
           ],
         ),
       ),
