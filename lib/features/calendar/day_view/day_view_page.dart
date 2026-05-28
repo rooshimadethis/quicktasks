@@ -49,6 +49,9 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
 
   Timer? _timeIndicatorTimer;
 
+  Offset? _draggedOffset;
+  CalendarItem? _draggedItem;
+
   bool _isToday(DateTime day) {
     final now = DateTime.now();
     return day.year == now.year && day.month == now.month && day.day == now.day;
@@ -531,6 +534,18 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                   scrollDirection: Axis.horizontal,
                   child: DragTarget<CalendarItem>(
                     onMove: (details) {
+                      final renderBox =
+                          context.findRenderObject() as RenderBox?;
+                      if (renderBox != null) {
+                        final localOffset = renderBox.globalToLocal(
+                          details.offset,
+                        );
+                        setState(() {
+                          _draggedOffset = localOffset;
+                          _draggedItem = details.data;
+                        });
+                      }
+
                       final x = details.offset.dx;
                       final screenWidth = MediaQuery.of(context).size.width;
                       if (x < 60) {
@@ -541,10 +556,20 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                         _stopAutoScroll();
                       }
                     },
-                    onLeave: (_) => _stopAutoScroll(),
+                    onLeave: (_) {
+                      _stopAutoScroll();
+                      setState(() {
+                        _draggedOffset = null;
+                        _draggedItem = null;
+                      });
+                    },
                     onWillAcceptWithDetails: (details) => true,
                     onAcceptWithDetails: (details) async {
                       _stopAutoScroll();
+                      setState(() {
+                        _draggedOffset = null;
+                        _draggedItem = null;
+                      });
                       final renderBox =
                           context.findRenderObject() as RenderBox?;
                       if (renderBox == null) return;
@@ -584,7 +609,50 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                       ref.read(googleCalendarServiceProvider).sync();
                     },
                     builder: (context, candidateData, rejectedData) {
-                      final isOver = candidateData.isNotEmpty;
+                      final isDragging =
+                          _draggedOffset != null && _draggedItem != null;
+                      double? highlightLeft;
+                      double? highlightWidth;
+                      if (isDragging) {
+                        final x = _draggedOffset!.dx;
+                        final hourDec = _getHourDecOfCoordinate(x, hourWidths);
+                        final hour = hourDec.floor().clamp(0, 23);
+                        final fracOfHour = hourDec - hour;
+                        final minute = ((fracOfHour * 60) / 30).round() * 30;
+                        final finalHour = minute == 60
+                            ? (hour + 1).clamp(0, 23)
+                            : hour;
+                        final finalMinute = minute == 60 ? 0 : minute;
+
+                        final slotStartDec = finalHour + finalMinute / 60.0;
+                        final duration =
+                            _draggedItem!.endAt != null &&
+                                _draggedItem!.startAt != null
+                            ? _draggedItem!.endAt!.difference(
+                                _draggedItem!.startAt!,
+                              )
+                            : const Duration(minutes: 30);
+
+                        final durationDec = duration.inMinutes / 60.0;
+                        final slotEndDec = (slotStartDec + durationDec).clamp(
+                          0.0,
+                          24.0,
+                        );
+
+                        highlightLeft = _getCoordinateOfHour(
+                          slotStartDec,
+                          hourWidths,
+                        );
+                        final highlightRight = _getCoordinateOfHour(
+                          slotEndDec,
+                          hourWidths,
+                        );
+                        highlightWidth = max(
+                          highlightRight - highlightLeft,
+                          80.0,
+                        );
+                      }
+
                       final maxRow = positionedItems.isNotEmpty
                           ? (positionedItems
                                     .map((pi) => pi.rowIndex)
@@ -600,9 +668,7 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                       return Container(
                         width: totalTimelineWidth,
                         height: timelineHeight,
-                        color: isOver
-                            ? theme.colorScheme.primary.withValues(alpha: 0.05)
-                            : Colors.transparent,
+                        color: Colors.transparent,
                         child: Stack(
                           children: [
                             // Grid lines
@@ -664,6 +730,30 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                                 color: theme.colorScheme.primary,
                               ),
                             ),
+
+                            // Highlight slot on hover during drag
+                            if (isDragging &&
+                                highlightLeft != null &&
+                                highlightWidth != null)
+                              Positioned(
+                                left: highlightLeft,
+                                width: highlightWidth,
+                                top: _headerHeight,
+                                bottom: 0,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.primary.withValues(
+                                      alpha: 0.15,
+                                    ),
+                                    border: Border.symmetric(
+                                      vertical: BorderSide(
+                                        color: theme.colorScheme.primary,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
 
                             // Tap detector for slot creation
                             Positioned.fill(
