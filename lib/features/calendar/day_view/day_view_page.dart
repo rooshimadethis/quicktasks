@@ -37,6 +37,7 @@ class DayViewPage extends ConsumerStatefulWidget {
 class _DayViewPageState extends ConsumerState<DayViewPage> {
   late DateTime _selectedDay;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final GlobalKey _timelineViewportKey = GlobalKey();
 
   final double _hourWidth = 180.0;
   final double _rowHeight = 64.0;
@@ -47,6 +48,7 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
 
   // Timer for drag auto scrolling
   Timer? _autoScrollTimer;
+  double? _dragPointerX; // true finger X, tracked via Listener
 
   Timer? _timeIndicatorTimer;
 
@@ -571,9 +573,16 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
 
               // 3. Scrollable Timeline
               Expanded(
-                child: SingleChildScrollView(
-                  controller: _scrollController,
-                  scrollDirection: Axis.horizontal,
+                child: Listener(
+                  onPointerMove: (event) {
+                    _dragPointerX = event.position.dx;
+                  },
+                  onPointerUp: (_) => _dragPointerX = null,
+                  onPointerCancel: (_) => _dragPointerX = null,
+                  child: SingleChildScrollView(
+                    key: _timelineViewportKey,
+                    controller: _scrollController,
+                    scrollDirection: Axis.horizontal,
                   child: DragTarget<CalendarItem>(
                     onMove: (details) {
                       final slotTime = _calculateSlotTime(
@@ -588,11 +597,14 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                         }
                       }
 
-                      final x = details.offset.dx;
+                      // Use true finger position (from Listener) for accurate
+                      // edge detection — details.offset is the widget top-left,
+                      // not the pointer, causing asymmetric triggers.
+                      final x = _dragPointerX ?? details.offset.dx;
                       final screenWidth = MediaQuery.of(context).size.width;
-                      if (x < 60) {
+                      if (x < 90) {
                         _startAutoScroll(left: true);
-                      } else if (x > screenWidth - 60) {
+                      } else if (x > screenWidth - 90) {
                         _startAutoScroll(left: false);
                       } else {
                         _stopAutoScroll();
@@ -894,6 +906,7 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                       );
                     },
                   ),
+                ),
                 ),
               ),
 
