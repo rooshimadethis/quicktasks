@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:quicktasks/app/theme/paper_decorations.dart';
 import 'package:quicktasks/domain/models/calendar_item.dart';
 import 'package:quicktasks/domain/repositories/calendar_item_repository.dart';
 import 'package:quicktasks/features/items/item_bottom_sheet.dart';
@@ -52,18 +53,23 @@ class BacklogTrayWidget extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  const Text(
-                    '📥 BACKLOG (UNSCHEDULED)',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 0.5),
+              HatchBackground(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: Row(
+                    children: [
+                      const Text(
+                        '📥 BACKLOG (UNSCHEDULED)',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 0.5),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '(${items.length} items)',
+                        style: const TextStyle(fontSize: 11, color: Colors.grey),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '(${items.length} items)',
-                    style: const TextStyle(fontSize: 11, color: Colors.grey),
-                  ),
-                ],
+                ),
               ),
               const SizedBox(height: 8),
               SizedBox(

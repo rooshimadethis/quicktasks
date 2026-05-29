@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:quicktasks/app/theme/paper_decorations.dart';
 import 'package:quicktasks/domain/models/calendar_item.dart';
 import 'package:quicktasks/domain/repositories/calendar_item_repository.dart';
 import 'package:quicktasks/features/backlog/backlog_tray_widget.dart';
@@ -493,30 +494,29 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
             children: [
               // 1. Navigation controls
               Container(
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: theme.colorScheme.primary,
-                      width: 1.5,
-                    ),
+                color: theme.colorScheme.primary,
+                child: IconTheme(
+                  data: IconThemeData(color: theme.scaffoldBackgroundColor),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back),
+                        onPressed: () => _changeDay(-1),
+                      ),
+                      Text(
+                        '${_selectedDay.year}-${_selectedDay.month.toString().padLeft(2, '0')}-${_selectedDay.day.toString().padLeft(2, '0')}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: theme.scaffoldBackgroundColor,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.arrow_forward),
+                        onPressed: () => _changeDay(1),
+                      ),
+                    ],
                   ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      onPressed: () => _changeDay(-1),
-                    ),
-                    Text(
-                      '${_selectedDay.year}-${_selectedDay.month.toString().padLeft(2, '0')}-${_selectedDay.day.toString().padLeft(2, '0')}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.arrow_forward),
-                      onPressed: () => _changeDay(1),
-                    ),
-                  ],
                 ),
               ),
 
@@ -660,6 +660,22 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                         color: Colors.transparent,
                         child: Stack(
                           children: [
+                            // Dot grid — fills the body area below the header
+                            Positioned(
+                              top: _headerHeight,
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              child: CustomPaint(
+                                painter: DotGridPainter(
+                                  color: theme.colorScheme.primary,
+                                  dotRadius: 0.8,
+                                  spacingX: 24.0,
+                                  spacingY: 24.0,
+                                ),
+                              ),
+                            ),
+
                             // Grid lines
                             Row(
                               children: List.generate(24, (hour) {
