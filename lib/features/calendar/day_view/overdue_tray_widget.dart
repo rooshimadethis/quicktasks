@@ -54,7 +54,7 @@ class _OverdueTrayWidgetState extends ConsumerState<OverdueTrayWidget> {
           decoration: BoxDecoration(
             color: theme.scaffoldBackgroundColor,
             border: Border(
-              top: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+              top: BorderSide(color: theme.colorScheme.primary, width: 2.0),
             ),
           ),
           child: Column(
@@ -108,7 +108,8 @@ class _OverdueTrayWidgetState extends ConsumerState<OverdueTrayWidget> {
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             decoration: BoxDecoration(
                               color: theme.scaffoldBackgroundColor,
-                              border: Border.all(color: theme.colorScheme.primary, width: 1.5),
+                              border: Border.all(color: theme.colorScheme.primary, width: 1.0),
+                              borderRadius: BorderRadius.circular(4),
                             ),
                             child: Row(
                               children: [
@@ -133,7 +134,8 @@ class _OverdueTrayWidgetState extends ConsumerState<OverdueTrayWidget> {
                         child: Container(
                           padding: const EdgeInsets.all(10.0),
                           decoration: BoxDecoration(
-                            border: Border.all(color: theme.colorScheme.primary, width: 1.5),
+                            border: Border.all(color: theme.colorScheme.primary, width: 1.0),
+                            borderRadius: BorderRadius.circular(4),
                           ),
                           child: Row(
                             children: [
@@ -160,7 +162,8 @@ class _OverdueTrayWidgetState extends ConsumerState<OverdueTrayWidget> {
                         child: Container(
                           padding: const EdgeInsets.all(10.0),
                           decoration: BoxDecoration(
-                            border: Border.all(color: theme.colorScheme.primary, width: 1.5),
+                            border: Border.all(color: theme.colorScheme.primary, width: 1.0),
+                            borderRadius: BorderRadius.circular(4),
                           ),
                           child: Row(
                             children: [

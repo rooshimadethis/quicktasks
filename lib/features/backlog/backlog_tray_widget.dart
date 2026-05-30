@@ -46,7 +46,7 @@ class BacklogTrayWidget extends ConsumerWidget {
           decoration: BoxDecoration(
             color: theme.scaffoldBackgroundColor,
             border: Border(
-              top: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+              top: BorderSide(color: theme.colorScheme.primary, width: 2.0),
             ),
           ),
           child: Column(
@@ -97,7 +97,8 @@ class BacklogTrayWidget extends ConsumerWidget {
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             decoration: BoxDecoration(
                               color: theme.scaffoldBackgroundColor,
-                              border: Border.all(color: theme.colorScheme.primary, width: 1.5),
+                              border: Border.all(color: theme.colorScheme.primary, width: 1.0),
+                              borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               '$categoryShape${item.title}',
@@ -111,7 +112,8 @@ class BacklogTrayWidget extends ConsumerWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
-                            border: Border.all(color: theme.colorScheme.primary, width: 1.5),
+                            border: Border.all(color: theme.colorScheme.primary, width: 1.0),
+                            borderRadius: BorderRadius.circular(4),
                           ),
                           alignment: Alignment.center,
                           child: Text(
@@ -128,7 +130,8 @@ class BacklogTrayWidget extends ConsumerWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
-                            border: Border.all(color: theme.colorScheme.primary, width: 1.5),
+                            border: Border.all(color: theme.colorScheme.primary, width: 1.0),
+                            borderRadius: BorderRadius.circular(4),
                           ),
                           alignment: Alignment.center,
                           child: Text(

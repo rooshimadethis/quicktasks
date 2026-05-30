@@ -69,6 +69,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/day';
       }
 
+      if (state.uri.path == '/task' || (state.uri.host == 'task' && (state.uri.path.isEmpty || state.uri.path == '/'))) {
+        final taskId = state.uri.queryParameters['id'];
+        return '/day?edit=$taskId';
+      }
+
       return null;
     },
     routes: [
@@ -78,7 +83,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/day',
-        builder: (context, state) => const DayViewPage(),
+        builder: (context, state) {
+          final editId = state.uri.queryParameters['edit'];
+          return DayViewPage(editId: editId);
+        },
       ),
       GoRoute(
         path: '/week',

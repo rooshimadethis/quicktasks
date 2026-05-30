@@ -16,10 +16,22 @@ final googleSignInProvider = Provider<GoogleSignIn>((ref) {
 });
 
 /// A StateNotifier to manage Google Authentication state and methods.
-class GoogleAuthNotifier extends StateNotifier<GoogleSignInAccount?> {
+class GoogleAuthState {
+  final GoogleSignInAccount? account;
+  final bool isInitialized;
+
+  GoogleAuthState({
+    required this.account,
+    required this.isInitialized,
+  });
+}
+
+/// A StateNotifier to manage Google Authentication state and methods.
+class GoogleAuthNotifier extends StateNotifier<GoogleAuthState> {
   final GoogleSignIn _googleSignIn;
 
-  GoogleAuthNotifier(this._googleSignIn) : super(null) {
+  GoogleAuthNotifier(this._googleSignIn)
+      : super(GoogleAuthState(account: null, isInitialized: false)) {
     signInSilently();
   }
 
@@ -27,13 +39,14 @@ class GoogleAuthNotifier extends StateNotifier<GoogleSignInAccount?> {
   Future<void> signInSilently() async {
     try {
       final account = await _googleSignIn.signInSilently();
-      state = account;
+      state = GoogleAuthState(account: account, isInitialized: true);
     } catch (e, stack) {
       developer.log(
         'Google silent sign-in failed',
         error: e,
         stackTrace: stack,
       );
+      state = GoogleAuthState(account: null, isInitialized: true);
     }
   }
 
@@ -42,7 +55,7 @@ class GoogleAuthNotifier extends StateNotifier<GoogleSignInAccount?> {
     try {
       final account = await _googleSignIn.signIn();
       if (account != null) {
-        state = account;
+        state = GoogleAuthState(account: account, isInitialized: true);
         return true;
       }
     } catch (e, stack) {
@@ -59,7 +72,7 @@ class GoogleAuthNotifier extends StateNotifier<GoogleSignInAccount?> {
   Future<void> signOut() async {
     try {
       await _googleSignIn.signOut();
-      state = null;
+      state = GoogleAuthState(account: null, isInitialized: true);
     } catch (e, stack) {
       developer.log('Google sign-out error', error: e, stackTrace: stack);
     }
@@ -68,14 +81,15 @@ class GoogleAuthNotifier extends StateNotifier<GoogleSignInAccount?> {
 
 /// Provider that exposes the current signed-in Google account (if any).
 final googleAuthNotifierProvider =
-    StateNotifierProvider<GoogleAuthNotifier, GoogleSignInAccount?>((ref) {
+    StateNotifierProvider<GoogleAuthNotifier, GoogleAuthState>((ref) {
       final signIn = ref.watch(googleSignInProvider);
       return GoogleAuthNotifier(signIn);
     });
 
 /// Provider for the async OAuth headers (e.g. auth tokens).
 final authHeadersProvider = FutureProvider<Map<String, String>?>((ref) async {
-  final user = ref.watch(googleAuthNotifierProvider);
+  final authState = ref.watch(googleAuthNotifierProvider);
+  final user = authState.account;
   if (user == null) return null;
   return await user.authHeaders;
 });
@@ -101,6 +115,11 @@ final gcalApiClientProvider = Provider<GCalApiClient?>((ref) {
     },
   );
 });
+
 final googleCalendarSignInStateProvider = Provider<bool>((ref) {
-  return ref.watch(googleAuthNotifierProvider) != null;
+  final authState = ref.watch(googleAuthNotifierProvider);
+  if (!authState.isInitialized) {
+    return true;
+  }
+  return authState.account != null;
 });

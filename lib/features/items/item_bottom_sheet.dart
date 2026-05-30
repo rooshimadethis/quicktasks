@@ -291,7 +291,7 @@ class _ItemBottomSheetState extends ConsumerState<ItemBottomSheet> {
                 ],
               ),
               const SizedBox(height: 16),
-              const Divider(height: 1.5),
+              const Divider(height: 2.0, thickness: 2.0),
               const SizedBox(height: 16),
 
               // 1. Type Toggle
@@ -330,6 +330,7 @@ class _ItemBottomSheetState extends ConsumerState<ItemBottomSheet> {
               // 2. Title Field
               TextFormField(
                 controller: _titleController,
+                autofocus: true,
                 decoration: const InputDecoration(
                   labelText: 'TITLE',
                   hintText: 'Enter title',
@@ -356,42 +357,7 @@ class _ItemBottomSheetState extends ConsumerState<ItemBottomSheet> {
               ),
               const SizedBox(height: 16),
 
-              // 4. Backlog and All-Day Toggles
-              if (_isTask) ...[
-                CheckboxListTile(
-                  title: const Text('ADD TO BACKLOG (UNSCHEDULED)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                  value: _isUnscheduled,
-                  onChanged: (val) {
-                    if (val != null) {
-                      setState(() {
-                        _isUnscheduled = val;
-                        if (val) {
-                          _isAllDay = false;
-                        }
-                      });
-                    }
-                  },
-                  contentPadding: EdgeInsets.zero,
-                  controlAffinity: ListTileControlAffinity.leading,
-                ),
-              ],
-              if (!_isUnscheduled) ...[
-                CheckboxListTile(
-                  title: const Text('ALL-DAY EVENT', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                  value: _isAllDay,
-                  onChanged: (val) {
-                    if (val != null) {
-                      setState(() {
-                        _isAllDay = val;
-                      });
-                    }
-                  },
-                  contentPadding: EdgeInsets.zero,
-                  controlAffinity: ListTileControlAffinity.leading,
-                ),
-              ],
-
-              // 5. Date & Time selectors
+              // 4. Date & Time selectors
               if (!_isUnscheduled) ...[
                 const SizedBox(height: 8),
                 Row(
@@ -426,6 +392,42 @@ class _ItemBottomSheetState extends ConsumerState<ItemBottomSheet> {
                     ],
                   ),
                 ],
+              ],
+              const SizedBox(height: 16),
+
+              // 5. Backlog and All-Day Toggles
+              if (_isTask) ...[
+                CheckboxListTile(
+                  title: const Text('ADD TO BACKLOG (UNSCHEDULED)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  value: _isUnscheduled,
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        _isUnscheduled = val;
+                        if (val) {
+                          _isAllDay = false;
+                        }
+                      });
+                    }
+                  },
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                ),
+              ],
+              if (!_isUnscheduled) ...[
+                CheckboxListTile(
+                  title: const Text('ALL-DAY EVENT', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  value: _isAllDay,
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        _isAllDay = val;
+                      });
+                    }
+                  },
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                ),
               ],
               const SizedBox(height: 20),
 

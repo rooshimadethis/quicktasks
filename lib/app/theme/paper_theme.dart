@@ -47,15 +47,15 @@ class PaperTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         shape: Border(
-          bottom: BorderSide(color: ink, width: 1.5),
+          bottom: BorderSide(color: ink, width: 2.0),
         ),
       ),
       cardTheme: CardThemeData(
         color: cardBg,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          side: const BorderSide(color: ink, width: 1.5),
-          borderRadius: BorderRadius.circular(0),
+          side: const BorderSide(color: ink, width: 1.0),
+          borderRadius: BorderRadius.circular(4),
         ),
       ),
       dialogTheme: DialogThemeData(
@@ -63,7 +63,7 @@ class PaperTheme {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           side: const BorderSide(color: ink, width: 1.5),
-          borderRadius: BorderRadius.circular(0),
+          borderRadius: BorderRadius.circular(4),
         ),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
@@ -72,10 +72,10 @@ class PaperTheme {
         modalBarrierColor: Colors.black26,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          side: BorderSide(color: ink, width: 1.5),
+          side: BorderSide(color: ink, width: 2.0),
           borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(0),
-            topRight: Radius.circular(0),
+            topLeft: Radius.circular(8),
+            topRight: Radius.circular(8),
           ),
         ),
       ),
@@ -88,8 +88,8 @@ class PaperTheme {
         disabledElevation: 0,
         highlightElevation: 0,
         shape: RoundedRectangleBorder(
-          side: BorderSide(color: ink, width: 1.5),
-          borderRadius: BorderRadius.zero,
+          side: BorderSide(color: ink, width: 2.0),
+          borderRadius: BorderRadius.all(Radius.circular(4)),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -100,7 +100,7 @@ class PaperTheme {
           shadowColor: Colors.transparent,
           side: const BorderSide(color: ink, width: 1.5),
           shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.zero,
+            borderRadius: BorderRadius.all(Radius.circular(4)),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
@@ -110,7 +110,7 @@ class PaperTheme {
           foregroundColor: ink,
           side: const BorderSide(color: ink, width: 1.5),
           shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.zero,
+            borderRadius: BorderRadius.all(Radius.circular(4)),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
@@ -124,24 +124,24 @@ class PaperTheme {
       inputDecorationTheme: const InputDecorationTheme(
         filled: false,
         border: OutlineInputBorder(
-          borderSide: BorderSide(color: ink, width: 1.5),
-          borderRadius: BorderRadius.zero,
+          borderSide: BorderSide(color: ink, width: 2.0),
+          borderRadius: BorderRadius.all(Radius.circular(4)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: ink, width: 1.5),
-          borderRadius: BorderRadius.zero,
+          borderSide: BorderSide(color: ink, width: 2.0),
+          borderRadius: BorderRadius.all(Radius.circular(4)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: ink, width: 2.0),
-          borderRadius: BorderRadius.zero,
+          borderSide: BorderSide(color: ink, width: 2.5),
+          borderRadius: BorderRadius.all(Radius.circular(4)),
         ),
         labelStyle: TextStyle(color: ink),
         hintStyle: TextStyle(color: Colors.grey),
       ),
       dividerTheme: const DividerThemeData(
         color: ink,
-        thickness: 1.5,
-        space: 1.5,
+        thickness: 1.0,
+        space: 1.0,
       ),
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith<Color?>((states) {
@@ -152,7 +152,7 @@ class PaperTheme {
         }),
         checkColor: WidgetStateProperty.all(background),
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.zero,
+          borderRadius: BorderRadius.all(Radius.circular(2)),
         ),
         side: const BorderSide(color: ink, width: 1.5),
       ),

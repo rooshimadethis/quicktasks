@@ -105,3 +105,94 @@ class HatchBackground extends StatelessWidget {
     );
   }
 }
+
+/// Draws a dashed line. Perfect for internal dividers that should feel "lighter" than main borders.
+class DashedLinePainter extends CustomPainter {
+  const DashedLinePainter({
+    this.color = const Color(0xFF1A1A1A),
+    this.dashWidth = 4.0,
+    this.dashSpace = 4.0,
+    this.strokeWidth = 1.0,
+    this.axis = Axis.horizontal,
+  });
+
+  final Color color;
+  final double dashWidth;
+  final double dashSpace;
+  final double strokeWidth;
+  final Axis axis;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    if (axis == Axis.horizontal) {
+      double startX = 0;
+      while (startX < size.width) {
+        canvas.drawLine(
+          Offset(startX, size.height / 2),
+          Offset(min(startX + dashWidth, size.width), size.height / 2),
+          paint,
+        );
+        startX += dashWidth + dashSpace;
+      }
+    } else {
+      double startY = 0;
+      while (startY < size.height) {
+        canvas.drawLine(
+          Offset(size.width / 2, startY),
+          Offset(size.width / 2, min(startY + dashWidth, size.height)),
+          paint,
+        );
+        startY += dashWidth + dashSpace;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(DashedLinePainter oldDelegate) =>
+      oldDelegate.color != color ||
+      oldDelegate.dashWidth != dashWidth ||
+      oldDelegate.dashSpace != dashSpace ||
+      oldDelegate.strokeWidth != strokeWidth ||
+      oldDelegate.axis != axis;
+}
+
+class DashedDivider extends StatelessWidget {
+  const DashedDivider({
+    super.key,
+    this.height = 1.0,
+    this.dashWidth = 4.0,
+    this.dashSpace = 4.0,
+    this.strokeWidth = 1.0,
+    this.color,
+    this.axis = Axis.horizontal,
+  });
+
+  final double height;
+  final double dashWidth;
+  final double dashSpace;
+  final double strokeWidth;
+  final Color? color;
+  final Axis axis;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: axis == Axis.horizontal ? double.infinity : height,
+      height: axis == Axis.vertical ? double.infinity : height,
+      child: CustomPaint(
+        painter: DashedLinePainter(
+          color: color ?? Theme.of(context).colorScheme.primary,
+          dashWidth: dashWidth,
+          dashSpace: dashSpace,
+          strokeWidth: strokeWidth,
+          axis: axis,
+        ),
+      ),
+    );
+  }
+}

@@ -68,7 +68,8 @@ class CalendarItemChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
         decoration: BoxDecoration(
           color: theme.scaffoldBackgroundColor, // solid bg to prevent overlap transparency
-          border: Border.all(color: theme.colorScheme.primary, width: 1.5),
+          border: Border.all(color: theme.colorScheme.primary, width: 1.0),
+          borderRadius: BorderRadius.circular(4),
         ),
         constraints: const BoxConstraints(minHeight: 56.0), // minimum tap target 56dp
         child: Row(

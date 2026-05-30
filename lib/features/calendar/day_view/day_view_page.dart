@@ -13,6 +13,7 @@ import 'package:quicktasks/features/items/calendar_item_chip.dart';
 import 'package:quicktasks/features/items/item_bottom_sheet.dart';
 import 'package:quicktasks/data/local/calendar_item_dao.dart';
 import 'package:quicktasks/features/sync/google_calendar_service.dart';
+import 'package:quicktasks/features/sync/google_auth_provider.dart';
 
 class PositionedItem {
   final CalendarItem item;
@@ -29,7 +30,8 @@ class PositionedItem {
 }
 
 class DayViewPage extends ConsumerStatefulWidget {
-  const DayViewPage({super.key});
+  final String? editId;
+  const DayViewPage({super.key, this.editId});
 
   @override
   ConsumerState<DayViewPage> createState() => _DayViewPageState();
@@ -74,6 +76,9 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkInitialSync();
+      if (widget.editId != null) {
+        _showEditSheet(widget.editId!);
+      }
     });
 
     // Update time indicator periodically
@@ -82,6 +87,24 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
         setState(() {});
       }
     });
+  }
+
+  @override
+  void didUpdateWidget(DayViewPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.editId != null && widget.editId != oldWidget.editId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showEditSheet(widget.editId!);
+      });
+    }
+  }
+
+  void _showEditSheet(String editId) async {
+    final repo = ref.read(calendarItemRepositoryProvider);
+    final item = await repo.getItemByLocalId(editId);
+    if (item != null && mounted) {
+      ItemBottomSheet.show(context, initialItem: item);
+    }
   }
 
   @override
@@ -301,6 +324,10 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
   }
 
   Future<void> _checkInitialSync() async {
+    final authState = ref.read(googleAuthNotifierProvider);
+    if (!authState.isInitialized || authState.account == null) {
+      return;
+    }
     final dao = ref.read(calendarItemDaoProvider);
     final hasSynced = await dao.hasAnySyncToken();
     if (!hasSynced) {
@@ -408,6 +435,13 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final repo = ref.watch(calendarItemRepositoryProvider);
+    final authState = ref.watch(googleAuthNotifierProvider);
+
+    ref.listen<GoogleAuthState>(googleAuthNotifierProvider, (previous, next) {
+      if (next.isInitialized && next.account != null && (previous == null || !previous.isInitialized)) {
+        _checkInitialSync();
+      }
+    });
 
     final dayStart = _selectedDay;
     final dayEnd = _selectedDay.add(const Duration(days: 1));
@@ -466,7 +500,9 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
           const SizedBox(width: 8),
         ],
       ),
-      body: StreamBuilder<List<CalendarItem>>(
+      body: Stack(
+        children: [
+          StreamBuilder<List<CalendarItem>>(
         stream: itemsStream,
         builder: (context, snapshot) {
           final items = snapshot.data ?? [];
@@ -547,9 +583,10 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(4),
                             border: Border.all(
                               color: theme.colorScheme.primary,
-                              width: 1.5,
+                              width: 1.0,
                             ),
                           ),
                           child: Row(
@@ -679,15 +716,16 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                             // Grid lines
                             Row(
                               children: List.generate(24, (hour) {
-                                return Container(
+                                return SizedBox(
                                   width: hourWidths[hour],
-                                  decoration: BoxDecoration(
-                                    border: Border(
-                                      right: BorderSide(
-                                        color: theme.colorScheme.primary
-                                            .withValues(alpha: 0.45),
-                                        width: 1.0,
-                                      ),
+                                  child: Align(
+                                    alignment: Alignment.centerRight,
+                                    child: DashedDivider(
+                                      axis: Axis.vertical,
+                                      dashWidth: 4,
+                                      dashSpace: 4,
+                                      strokeWidth: 1.2,
+                                      color: theme.colorScheme.primary.withValues(alpha: 0.6),
                                     ),
                                   ),
                                 );
@@ -724,14 +762,14 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                               ),
                             ),
 
-                            // Header line
+                            // Header line (Solid and thick)
                             Positioned(
-                              top: _headerHeight - 1,
+                              top: _headerHeight - 2,
                               left: 0,
                               right: 0,
                               child: Divider(
-                                height: 1,
-                                thickness: 1.2,
+                                height: 2,
+                                thickness: 2.0,
                                 color: theme.colorScheme.primary,
                               ),
                             ),
@@ -789,11 +827,11 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                                       child: Container(
                                         decoration: BoxDecoration(
                                           color: theme.colorScheme.primary
-                                              .withValues(alpha: 0.15),
+                                              .withValues(alpha: 0.1),
                                           border: Border.symmetric(
                                             vertical: BorderSide(
                                               color: theme.colorScheme.primary,
-                                              width: 1.5,
+                                              width: 1.0,
                                             ),
                                           ),
                                         ),
@@ -933,13 +971,42 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // FAB creates a new task (no pre-filled time)
-          ItemBottomSheet.show(context);
-        },
-        child: const Icon(Icons.add, size: 28),
+          if (!authState.isInitialized)
+            Positioned.fill(
+              child: Container(
+                color: theme.scaffoldBackgroundColor,
+                child: Center(
+                  child: AlertDialog(
+                    title: const Text(
+                      'CONNECTING TO GOOGLE',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    content: const Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('[ PLEASE WAIT ]', style: TextStyle(fontWeight: FontWeight.bold)),
+                        SizedBox(height: 16),
+                        Text(
+                          'Checking sign-in status...',
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
+      floatingActionButton: authState.isInitialized
+          ? FloatingActionButton(
+              onPressed: () {
+                // FAB creates a new task (no pre-filled time)
+                ItemBottomSheet.show(context);
+              },
+              child: const Icon(Icons.add, size: 28),
+            )
+          : null,
     );
   }
 }

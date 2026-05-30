@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:quicktasks/app/theme/paper_decorations.dart';
 import 'package:quicktasks/domain/models/calendar_item.dart';
 import 'package:quicktasks/domain/repositories/calendar_item_repository.dart';
 import 'package:quicktasks/features/backlog/backlog_tray_widget.dart';
 import 'package:quicktasks/features/calendar/day_view/overdue_tray_widget.dart';
 import 'package:quicktasks/features/items/item_bottom_sheet.dart';
 import 'package:quicktasks/features/sync/google_calendar_service.dart';
+import 'package:quicktasks/features/sync/google_auth_provider.dart';
 
 class WeekViewPage extends ConsumerStatefulWidget {
   const WeekViewPage({super.key});
@@ -115,6 +117,7 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final repo = ref.watch(calendarItemRepositoryProvider);
+    final authState = ref.watch(googleAuthNotifierProvider);
 
     // Columns are defined as today - 2, today - 1, today, today + 1, today + 2
     final start = _centerDate.subtract(const Duration(days: 2));
@@ -146,7 +149,9 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
           const SizedBox(width: 8),
         ],
       ),
-      body: GestureDetector(
+      body: Stack(
+        children: [
+          GestureDetector(
         behavior: HitTestBehavior.translucent,
         onHorizontalDragEnd: (details) {
           // Detect horizontal swipes to shift days
@@ -197,99 +202,100 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
                       final dayNum = dayDate.day.toString();
 
                       return Expanded(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            border: Border(
-                              right: index < 4 
-                                  ? BorderSide(color: theme.colorScheme.primary, width: 1.5)
-                                  : BorderSide.none,
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              // Column Header
-                              InkWell(
-                                onTap: () {
-                                  HapticFeedback.selectionClick();
-                                  // Navigate to Day View for this date
-                                  // Since DayViewPage displays the day, we need to pass the date or update its state
-                                  // We can push to DayViewPage and pass date parameters if needed, or simply pass the date
-                                  // Let's implement dynamic day selection on routing or pass via router if supported.
-                                  // For simplicity, we can let user click and navigate. Since GoRouter does '/day', we can pass date parameter or let routing handle it.
-                                  // Actually, we can use a shared state provider for the active day!
-                                  // Let's keep it simple: go to '/day' and we can pass query parameters if needed. Or we can just go back.
-                                  // Let's pass the date as a query parameter '/day?date=2026-05-28' in the future, but for now we can just navigate.
-                                  context.go('/day');
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                                  color: isToday 
-                                      ? theme.colorScheme.primary.withValues(alpha: 0.08) 
-                                      : Colors.transparent,
-                                  child: Column(
-                                    children: [
-                                      Text(
-                                        dayName,
-                                        style: TextStyle(
-                                          fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-                                          fontSize: 10,
+                        child: Stack(
+                          children: [
+                            if (index < 4)
+                              Positioned(
+                                top: 0,
+                                bottom: 0,
+                                right: 0,
+                                child: DashedDivider(
+                                  axis: Axis.vertical,
+                                  dashWidth: 4,
+                                  dashSpace: 4,
+                                  strokeWidth: 1.2,
+                                  color: theme.colorScheme.primary.withValues(alpha: 0.6),
+                                ),
+                              ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                // Column Header
+                                InkWell(
+                                  onTap: () {
+                                    HapticFeedback.selectionClick();
+                                    context.go('/day');
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                    color: isToday 
+                                        ? theme.colorScheme.primary.withValues(alpha: 0.08) 
+                                        : Colors.transparent,
+                                    child: Column(
+                                      children: [
+                                        Text(
+                                          dayName,
+                                          style: TextStyle(
+                                            fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                                            fontSize: 10,
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        dayNum,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                          decoration: isToday ? TextDecoration.underline : null,
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          dayNum,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                            decoration: isToday ? TextDecoration.underline : null,
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const Divider(height: 1),
+                                Divider(height: 1, thickness: 1, color: theme.colorScheme.primary),
 
-                              // Items list for this day
-                              Expanded(
-                                child: ListView.separated(
-                                  padding: const EdgeInsets.all(4.0),
-                                  itemCount: dayItems.length,
-                                  separatorBuilder: (context, idx) => const SizedBox(height: 4),
-                                  itemBuilder: (context, idx) {
-                                    final item = dayItems[idx];
-                                    final shape = _getCategoryShape(item.category);
+                                // Items list for this day
+                                Expanded(
+                                  child: ListView.separated(
+                                    padding: const EdgeInsets.all(4.0),
+                                    itemCount: dayItems.length,
+                                    separatorBuilder: (context, idx) => const SizedBox(height: 4),
+                                    itemBuilder: (context, idx) {
+                                      final item = dayItems[idx];
+                                      final shape = _getCategoryShape(item.category);
 
-                                    return InkWell(
-                                      onTap: () {
-                                        HapticFeedback.lightImpact();
-                                        ItemBottomSheet.show(context, initialItem: item);
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.all(6.0),
-                                        decoration: BoxDecoration(
-                                          border: Border.all(color: theme.colorScheme.primary, width: 1.5),
-                                          color: theme.scaffoldBackgroundColor,
-                                        ),
-                                        child: Text(
-                                          '${item.isComplete ? '☒ ' : ''}$shape${item.title}',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                            decoration: item.isComplete ? TextDecoration.lineThrough : null,
-                                            decorationThickness: 1.5,
+                                      return InkWell(
+                                        onTap: () {
+                                          HapticFeedback.lightImpact();
+                                          ItemBottomSheet.show(context, initialItem: item);
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.all(6.0),
+                                          decoration: BoxDecoration(
+                                            border: Border.all(color: theme.colorScheme.primary, width: 1.0),
+                                            borderRadius: BorderRadius.circular(4),
+                                            color: theme.scaffoldBackgroundColor,
                                           ),
-                                          maxLines: 4,
-                                          overflow: TextOverflow.ellipsis,
+                                          child: Text(
+                                            '${item.isComplete ? '☒ ' : ''}$shape${item.title}',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              decoration: item.isComplete ? TextDecoration.lineThrough : null,
+                                              decorationThickness: 1.5,
+                                            ),
+                                            maxLines: 4,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
-                                      ),
-                                    );
-                                  },
+                                      );
+                                    },
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
+                              ],
+                            ),
+                          ],
                         ),
                       );
                     }),
@@ -303,6 +309,33 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
             const BacklogTrayWidget(),
           ],
         ),
+      ),
+          if (!authState.isInitialized)
+            Positioned.fill(
+              child: Container(
+                color: theme.scaffoldBackgroundColor,
+                child: Center(
+                  child: AlertDialog(
+                    title: const Text(
+                      'CONNECTING TO GOOGLE',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    content: const Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('[ PLEASE WAIT ]', style: TextStyle(fontWeight: FontWeight.bold)),
+                        SizedBox(height: 16),
+                        Text(
+                          'Checking sign-in status...',
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
