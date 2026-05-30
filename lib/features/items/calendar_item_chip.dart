@@ -41,15 +41,19 @@ class CalendarItemChip extends StatelessWidget {
     );
 
     // Build the leading checkmark toggle for both tasks and events
-    final leadingWidget = SizedBox(
-      width: 32,
-      height: 32,
-      child: Checkbox(
-        value: item.isComplete,
-        onChanged: (_) {
-          HapticFeedback.lightImpact();
-          onComplete?.call();
-        },
+    final leadingWidget = GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {}, // Prevents tap propagation to the parent InkWell
+      child: SizedBox(
+        width: 32,
+        height: 32,
+        child: Checkbox(
+          value: item.isComplete,
+          onChanged: (_) {
+            HapticFeedback.lightImpact();
+            onComplete?.call();
+          },
+        ),
       ),
     );
 

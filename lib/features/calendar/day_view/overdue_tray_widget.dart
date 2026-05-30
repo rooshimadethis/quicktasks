@@ -167,22 +167,26 @@ class _OverdueTrayWidgetState extends ConsumerState<OverdueTrayWidget> {
                           ),
                           child: Row(
                             children: [
-                              SizedBox(
-                                width: 32,
-                                height: 32,
-                                child: Checkbox(
-                                  value: item.isComplete,
-                                  onChanged: (val) async {
-                                    if (val != null) {
-                                      HapticFeedback.lightImpact();
-                                      final updated = item.copyWith(
-                                        isComplete: val,
-                                        completedAt: val ? DateTime.now() : null,
-                                      );
-                                      await repo.updateItem(updated);
-                                      ref.read(googleCalendarServiceProvider).sync();
-                                    }
-                                  },
+                              GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () {}, // Prevents tap propagation to the parent InkWell
+                                child: SizedBox(
+                                  width: 32,
+                                  height: 32,
+                                  child: Checkbox(
+                                    value: item.isComplete,
+                                    onChanged: (val) async {
+                                      if (val != null) {
+                                        HapticFeedback.lightImpact();
+                                        final updated = item.copyWith(
+                                          isComplete: val,
+                                          completedAt: val ? DateTime.now() : null,
+                                        );
+                                        await repo.updateItem(updated);
+                                        ref.read(googleCalendarServiceProvider).sync();
+                                      }
+                                    },
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 8),
