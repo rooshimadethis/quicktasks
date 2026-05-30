@@ -42,7 +42,7 @@ category: "work" | "personal" | "errand" | "none"
 - Subsequent: incremental via `syncToken`
 - Local-first writes: `SyncStatus` enum — `synced | pendingCreate | pendingUpdate | pendingDelete`
 - Conflict resolution: last-write-wins
-- Triggers: app foreground, post-edit, manual pull-to-refresh
+- Triggers: post-edit, manual pull-to-refresh
 
 ---
 
@@ -137,7 +137,7 @@ Normal/dark theme is Phase 2. Do not add color, gradients, shadows, or animation
 - **Swipe right** on task → quick reschedule (+30m / +1h / +3h / Tomorrow / Pick)
 - **Long press** → full edit sheet
 - **Overdue Tray** — at the *bottom* of Day and Week views; hold-to-drag onto timeline; tap for reschedule sheet
-- **Week view**: 5 columns (today ±2), swipe shifts by 1 day, Today button recenters
+- **Week view**: 5 columns (today ±2), swipe shifts by 2 days, Today button recenters
 - **FAB** → new task, no pre-filled time
 - External GCal events: same chip, small 📅 icon in corner; fully editable in-app
 

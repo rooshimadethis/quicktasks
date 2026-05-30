@@ -113,6 +113,22 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
     }
   }
 
+  String _formatItemTime(CalendarItem item) {
+    if (item.isAllDay) {
+      return 'All Day';
+    }
+    if (item.startAt == null) {
+      return '';
+    }
+    final dt = item.startAt!;
+    final hour = dt.hour;
+    final minute = dt.minute;
+    final period = hour >= 12 ? 'PM' : 'AM';
+    final formattedHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+    final formattedMinute = minute.toString().padLeft(2, '0');
+    return '$formattedHour:$formattedMinute $period';
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -157,11 +173,11 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
           // Detect horizontal swipes to shift days
           if (details.primaryVelocity == null) return;
           if (details.primaryVelocity! < 0) {
-            // Swipe Left -> Shift forward by 1 day
-            _shiftCenterDate(1);
+            // Swipe Left -> Shift forward by 2 days
+            _shiftCenterDate(2);
           } else if (details.primaryVelocity! > 0) {
-            // Swipe Right -> Shift backward by 1 day
-            _shiftCenterDate(-1);
+            // Swipe Right -> Shift backward by 2 days
+            _shiftCenterDate(-2);
           }
         },
         child: Column(
@@ -257,40 +273,71 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
 
                                 // Items list for this day
                                 Expanded(
-                                  child: ListView.separated(
-                                    padding: const EdgeInsets.all(4.0),
-                                    itemCount: dayItems.length,
-                                    separatorBuilder: (context, idx) => const SizedBox(height: 4),
-                                    itemBuilder: (context, idx) {
-                                      final item = dayItems[idx];
-                                      final shape = _getCategoryShape(item.category);
-
-                                      return InkWell(
-                                        onTap: () {
-                                          HapticFeedback.lightImpact();
-                                          ItemBottomSheet.show(context, initialItem: item);
-                                        },
-                                        child: Container(
-                                          padding: const EdgeInsets.all(6.0),
-                                          decoration: BoxDecoration(
-                                            border: Border.all(color: theme.colorScheme.primary, width: 1.0),
-                                            borderRadius: BorderRadius.circular(4),
-                                            color: theme.scaffoldBackgroundColor,
-                                          ),
-                                          child: Text(
-                                            '${item.isComplete ? '☒ ' : ''}$shape${item.title}',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                              decoration: item.isComplete ? TextDecoration.lineThrough : null,
-                                              decorationThickness: 1.5,
-                                            ),
-                                            maxLines: 4,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
+                                  child: GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: () {
+                                      HapticFeedback.lightImpact();
+                                      final now = DateTime.now();
+                                      final prefilledTime = DateTime(
+                                        dayDate.year,
+                                        dayDate.month,
+                                        dayDate.day,
+                                        now.hour,
+                                        now.minute,
+                                      );
+                                      ItemBottomSheet.show(
+                                        context,
+                                        prefilledStart: prefilledTime,
                                       );
                                     },
+                                    child: ListView.separated(
+                                      padding: const EdgeInsets.all(4.0),
+                                      itemCount: dayItems.length,
+                                      separatorBuilder: (context, idx) => const SizedBox(height: 4),
+                                      itemBuilder: (context, idx) {
+                                        final item = dayItems[idx];
+                                        final shape = _getCategoryShape(item.category);
+
+                                        return InkWell(
+                                          onTap: () {
+                                            HapticFeedback.lightImpact();
+                                            ItemBottomSheet.show(context, initialItem: item);
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.all(6.0),
+                                            decoration: BoxDecoration(
+                                              border: Border.all(color: theme.colorScheme.primary, width: 1.0),
+                                              borderRadius: BorderRadius.circular(4),
+                                              color: theme.scaffoldBackgroundColor,
+                                            ),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  '${item.isComplete ? '☒ ' : ''}$shape${item.title}',
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    decoration: item.isComplete ? TextDecoration.lineThrough : null,
+                                                    decorationThickness: 1.5,
+                                                  ),
+                                                  maxLines: 4,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  _formatItemTime(item),
+                                                  style: TextStyle(
+                                                    fontSize: 8.5,
+                                                    color: theme.colorScheme.primary.withValues(alpha: 0.85),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
                                   ),
                                 ),
                               ],

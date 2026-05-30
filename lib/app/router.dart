@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:quicktasks/features/sync/google_auth_provider.dart';
 import 'package:quicktasks/features/calendar/day_view/day_view_page.dart';
 import 'package:quicktasks/features/calendar/week_view/week_view_page.dart';
+
+final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
+  throw UnimplementedError();
+});
 
 class LoginPage extends ConsumerWidget {
   const LoginPage({super.key});
@@ -55,9 +60,13 @@ class LoginPage extends ConsumerWidget {
 final routerProvider = Provider<GoRouter>((ref) {
   // Watch auth state to trigger redirect evaluations when it changes
   final isSignedIn = ref.watch(googleCalendarSignInStateProvider);
+  final prefs = ref.watch(sharedPreferencesProvider);
+
+  // Read last_view (defaulting to '/day' if null or invalid)
+  final lastView = prefs.getString('last_view') ?? '/day';
 
   return GoRouter(
-    initialLocation: isSignedIn ? '/day' : '/login',
+    initialLocation: isSignedIn ? lastView : '/login',
     redirect: (context, state) {
       final isLoggingIn = state.uri.path == '/login';
 
@@ -66,7 +75,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       if (isLoggingIn) {
-        return '/day';
+        final lastViewRedirect = ref.read(sharedPreferencesProvider).getString('last_view') ?? '/day';
+        return lastViewRedirect;
+      }
+
+      // Save last visited path if it is /day or /week
+      final path = state.uri.path;
+      if (path == '/day' || path == '/week') {
+        ref.read(sharedPreferencesProvider).setString('last_view', path);
       }
 
       if (state.uri.path == '/task' || (state.uri.host == 'task' && (state.uri.path.isEmpty || state.uri.path == '/'))) {

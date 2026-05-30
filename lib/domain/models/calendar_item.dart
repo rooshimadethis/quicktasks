@@ -118,9 +118,19 @@ class CalendarItem {
     final type = isTaskProp == 'true' ? CalendarItemType.task : CalendarItemType.event;
 
     // Read completion properties
-    final isComplete = privateProps['isComplete'] == 'true';
+    var isComplete = privateProps['isComplete'] == 'true';
     final completedAtStr = privateProps['completedAt'];
     final completedAt = completedAtStr != null ? DateTime.tryParse(completedAtStr) : null;
+
+    final summary = event.summary ?? '(Untitled)';
+    String cleanTitle = summary;
+    if (summary.toLowerCase().endsWith(' (done)')) {
+      cleanTitle = summary.substring(0, summary.length - 7);
+      isComplete = true;
+      if (cleanTitle.trim().isEmpty) {
+        cleanTitle = '(Untitled)';
+      }
+    }
 
     // Read category
     final categoryStr = privateProps['category'] ?? 'none';
@@ -158,7 +168,7 @@ class CalendarItem {
 
     return CalendarItem(
       localId: fallbackLocalId,
-      title: event.summary ?? '(Untitled)',
+      title: cleanTitle,
       description: event.description,
       type: type,
       googleEventId: event.id,
@@ -180,7 +190,7 @@ class CalendarItem {
   cal.Event toGCalEvent() {
     final event = cal.Event();
     event.id = googleEventId;
-    event.summary = title;
+    event.summary = isComplete ? '$title (done)' : title;
     event.description = description;
 
     final isBacklog = startAt == null || endAt == null;
