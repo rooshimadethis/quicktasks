@@ -47,7 +47,7 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
   final double _headerHeight = 40.0;
 
   late ScrollController _scrollController;
-  DateTime? _lastAutoScrolledDay;
+  bool _hasScrolledForCurrentDay = false;
 
   // Timer for drag auto scrolling
   Timer? _autoScrollTimer;
@@ -338,7 +338,6 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
 
     final maxScroll = _scrollController.position.maxScrollExtent;
     _scrollController.jumpTo(targetOffset.clamp(0.0, maxScroll));
-    _lastAutoScrolledDay = _selectedDay;
   }
 
   void _showSyncingDialog(BuildContext context, String message) {
@@ -418,6 +417,7 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
     HapticFeedback.selectionClick();
     setState(() {
       _selectedDay = _selectedDay.add(Duration(days: days));
+      _hasScrolledForCurrentDay = false;
     });
   }
 
@@ -426,6 +426,7 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
     final now = DateTime.now();
     setState(() {
       _selectedDay = DateTime(now.year, now.month, now.day);
+      _hasScrolledForCurrentDay = false;
     });
   }
 
@@ -596,12 +597,13 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
             currentX = _getCoordinateOfHour(nowDec, hourWidths);
           }
 
-          // Schedule auto-scroll on next frame if date changed
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (_lastAutoScrolledDay != _selectedDay) {
+          // Schedule auto-scroll on next frame if not scrolled for current day
+          if (snapshot.hasData && !_hasScrolledForCurrentDay) {
+            _hasScrolledForCurrentDay = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
               _autoScrollToFirstEvent(timelineItems);
-            }
-          });
+            });
+          }
 
           return Column(
             children: [

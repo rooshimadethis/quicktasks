@@ -8,7 +8,7 @@
          No explicit XML wiring is needed as the Google Play Services SDK automatically maps and retrieves this on Android. -->
 
     <application
-        android:label="QuickTasks Update"
+        android:label="quicktasks"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round">

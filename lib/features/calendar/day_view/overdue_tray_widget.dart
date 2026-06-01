@@ -28,6 +28,144 @@ class _OverdueTrayWidgetState extends ConsumerState<OverdueTrayWidget> {
     }
   }
 
+  void _showFullOverdueSheet(
+    BuildContext context,
+    List<CalendarItem> items,
+    ThemeData theme,
+    CalendarItemRepository repo,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.9,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) {
+            return Consumer(
+              builder: (context, ref, child) {
+                final now = DateTime.now();
+                final startOfToday = DateTime(now.year, now.month, now.day);
+                final overdueStream = ref.watch(calendarItemRepositoryProvider).watchOverdueItems(startOfToday);
+
+                return StreamBuilder<List<CalendarItem>>(
+                  stream: overdueStream,
+                  builder: (context, snapshot) {
+                    final currentItems = snapshot.data ?? items;
+
+                    return Container(
+                      padding: const EdgeInsets.all(16.0),
+                      color: theme.scaffoldBackgroundColor,
+                      child: Column(
+                        children: [
+                          // Header
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '⚠️ ALL OVERDUE ITEMS (${currentItems.length})',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  HapticFeedback.lightImpact();
+                                  Navigator.pop(context);
+                                },
+                                child: const Text('CLOSE'),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 2.0, thickness: 2.0),
+                          const SizedBox(height: 16),
+
+                          // List
+                          Expanded(
+                            child: currentItems.isEmpty
+                                ? const Center(
+                                    child: Text(
+                                      'NO OVERDUE ITEMS',
+                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                  )
+                                : ListView.separated(
+                                    controller: scrollController,
+                                    itemCount: currentItems.length,
+                                    separatorBuilder: (context, index) => const SizedBox(height: 8),
+                                    itemBuilder: (context, index) {
+                                      final item = currentItems[index];
+                                      final categoryShape = _getCategoryShape(item.category);
+
+                                      return Container(
+                                        decoration: BoxDecoration(
+                                          border: Border.all(color: theme.colorScheme.primary, width: 1.0),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: InkWell(
+                                          onTap: () {
+                                            Navigator.pop(context); // Close before showing details
+                                            ItemBottomSheet.show(context, initialItem: item);
+                                          },
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(10.0),
+                                            child: Row(
+                                              children: [
+                                                GestureDetector(
+                                                  behavior: HitTestBehavior.opaque,
+                                                  onTap: () {}, // Prevent propagation
+                                                  child: Checkbox(
+                                                    value: item.isComplete,
+                                                    onChanged: (val) async {
+                                                      if (val != null) {
+                                                        HapticFeedback.lightImpact();
+                                                        final updated = item.copyWith(
+                                                          isComplete: val,
+                                                          completedAt: val ? DateTime.now() : null,
+                                                        );
+                                                        await repo.updateItem(updated);
+                                                        ref.read(googleCalendarServiceProvider).sync();
+                                                      }
+                                                    },
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    '$categoryShape${item.title}',
+                                                    style: const TextStyle(
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 12,
+                                                      decoration: null,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -61,21 +199,27 @@ class _OverdueTrayWidgetState extends ConsumerState<OverdueTrayWidget> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              HatchBackground(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4.0),
-                  child: Row(
-                    children: [
-                      const Text(
-                        '⚠️ OVERDUE ITEMS',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 0.5),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '(${items.length} items)',
-                        style: const TextStyle(fontSize: 11, color: Colors.grey),
-                      ),
-                    ],
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  _showFullOverdueSheet(context, items, theme, repo);
+                },
+                child: HatchBackground(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 6.0),
+                    child: Row(
+                      children: [
+                        const Text(
+                          '⚠️ OVERDUE ITEMS',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 0.5),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '(${items.length} items)',
+                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
