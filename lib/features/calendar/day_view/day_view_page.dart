@@ -473,11 +473,18 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
           ? 24.0
           : (endCalculated.hour + endCalculated.minute / 60.0);
 
-      final left = _getCoordinateOfHour(startDec, hourWidths);
+      double left = _getCoordinateOfHour(startDec, hourWidths);
       final right = _getCoordinateOfHour(endDec, hourWidths);
 
       // Enforce minimum width of 140dp for readability/tap targets
       final width = max(right - left, 140.0);
+
+      // Shift item left if it overflows the end of the timeline
+      final totalWidth = hourWidths.reduce((a, b) => a + b);
+      if (left + width > totalWidth) {
+        left = max(0.0, totalWidth - width);
+      }
+
       final visualRight = left + width;
 
       int targetRowIndex = -1;
@@ -841,7 +848,7 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                                               child: Text(
                                                 label,
                                                 style: const TextStyle(
-                                                  fontSize: 10,
+                                                  fontSize: 13,
                                                   fontWeight: FontWeight.bold,
                                                 ),
                                               ),

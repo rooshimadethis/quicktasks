@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class PaperTheme {
-  static const Color background = Color(0xFFF5F5F0);
-  static const Color ink = Color(0xFF1A1A1A);
+  static const Color background = Color(0xFFFAF9F5);
+  static const Color ink = Color(0xFF1A1C19);
+  static const Color surfaceDim = Color(0xFFDADAD5);
+  static const Color slateGrey = Color(0xFF444748);
   static const Color cardBg = Colors.transparent;
 
   static ThemeData get themeData {
@@ -14,30 +16,51 @@ class PaperTheme {
         brightness: Brightness.light,
         primary: ink,
         onPrimary: background,
-        secondary: ink,
+        secondary: slateGrey,
         onSecondary: background,
         error: ink,
         onError: background,
         surface: background,
         onSurface: ink,
+        surfaceContainer: surfaceDim,
+        onSurfaceVariant: slateGrey,
       ),
       textTheme: GoogleFonts.interTextTheme().copyWith(
-        titleLarge: GoogleFonts.inter(
+        titleLarge: GoogleFonts.newsreader(
           color: ink,
           fontWeight: FontWeight.bold,
-          fontSize: 20,
+          fontSize: 22,
         ),
-        titleMedium: GoogleFonts.inter(
+        titleMedium: GoogleFonts.newsreader(
           color: ink,
           fontWeight: FontWeight.bold,
-          fontSize: 16,
+          fontSize: 18,
         ),
         bodyLarge: GoogleFonts.inter(
           color: ink,
-          fontSize: 16,
+          fontSize: 18,
         ),
         bodyMedium: GoogleFonts.inter(
           color: ink,
+          fontSize: 16,
+        ),
+        bodySmall: GoogleFonts.inter(
+          color: ink,
+          fontSize: 14,
+        ),
+        labelLarge: GoogleFonts.inter(
+          color: ink,
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+        ),
+        labelMedium: GoogleFonts.inter(
+          color: ink,
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
+        ),
+        labelSmall: GoogleFonts.inter(
+          color: ink,
+          fontWeight: FontWeight.bold,
           fontSize: 14,
         ),
       ),
@@ -69,7 +92,7 @@ class PaperTheme {
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: background,
         surfaceTintColor: Colors.transparent,
-        modalBarrierColor: Colors.black26,
+        modalBarrierColor: Colors.transparent,
         elevation: 0,
         shape: RoundedRectangleBorder(
           side: BorderSide(color: ink, width: 2.0),
@@ -136,7 +159,7 @@ class PaperTheme {
           borderRadius: BorderRadius.all(Radius.circular(4)),
         ),
         labelStyle: TextStyle(color: ink),
-        hintStyle: TextStyle(color: Colors.grey),
+        hintStyle: TextStyle(color: slateGrey),
       ),
       dividerTheme: const DividerThemeData(
         color: ink,

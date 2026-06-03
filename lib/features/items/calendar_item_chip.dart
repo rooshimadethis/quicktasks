@@ -36,8 +36,9 @@ class CalendarItemChip extends StatelessWidget {
     // Complete visual: strikethrough title
     final titleStyle = theme.textTheme.bodyMedium?.copyWith(
       fontWeight: FontWeight.bold,
+      fontSize: 14,
       decoration: item.isComplete ? TextDecoration.lineThrough : null,
-      decorationThickness: 2.0,
+      decorationThickness: item.isComplete ? 2.0 : null,
     );
 
     // Build the leading checkmark toggle for both tasks and events

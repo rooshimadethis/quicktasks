@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:quicktasks/app/theme/paper_decorations.dart';
 import 'package:quicktasks/domain/models/calendar_item.dart';
 import 'package:quicktasks/domain/repositories/calendar_item_repository.dart';
 import 'package:quicktasks/features/items/item_bottom_sheet.dart';
@@ -204,22 +203,39 @@ class _OverdueTrayWidgetState extends ConsumerState<OverdueTrayWidget> {
                   HapticFeedback.mediumImpact();
                   _showFullOverdueSheet(context, items, theme, repo);
                 },
-                child: HatchBackground(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 6.0),
-                    child: Row(
-                      children: [
-                        const Text(
-                          '⚠️ OVERDUE ITEMS',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 0.5),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '(${items.length} items)',
-                          style: const TextStyle(fontSize: 11, color: Colors.grey),
-                        ),
-                      ],
-                    ),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 10.0),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainer,
+                    border: Border.all(color: theme.colorScheme.primary, width: 1.0),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Text(
+                            '⚠️ OVERDUE ITEMS',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.5),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '(${items.length} items)',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Icon(
+                        Icons.keyboard_arrow_up,
+                        color: theme.colorScheme.primary,
+                        size: 24,
+                      ),
+                    ],
                   ),
                 ),
               ),

@@ -6,6 +6,14 @@ QuickTasks is a Flutter app that uses Google Calendar as its only backend but re
 
 It's built for an e-ink Android phone as the primary device, so the design is high-contrast, no animations, no color — just borders, shapes, and text.
 
+## Screenshots
+
+<p align="center">
+  <img src="assets/screenshots/day_view.png" width="32%" alt="Day View" />
+  <img src="assets/screenshots/week_view.png" width="32%" alt="Week View" />
+  <img src="assets/screenshots/item_bottom_sheet.png" width="32%" alt="Create/Edit Task Sheet" />
+</p>
+
 ## Features
 
 - **Two-way Google Calendar sync** — reads events from all your calendars and writes tasks/events to a dedicated "QuickTasks" calendar. Uses incremental sync tokens so it doesn't refetch everything each time.
@@ -21,7 +29,7 @@ It's built for an e-ink Android phone as the primary device, so the design is hi
 
 ## Design
 
-The UI uses a "paper" theme designed for e-ink screens — high contrast, no animations, no gradients, solid borders. Text is set in Inter. Minimum tap targets are 56dp.
+The UI uses a "Tactile E-Paper" theme designed for e-ink screens — high contrast, no animations, no gradients, solid borders. Text is set in Newsreader (for titles/headers) and Inter (for body and labels). Minimum tap targets are 56px.
 
 ## Tech stack
 

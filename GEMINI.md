@@ -111,20 +111,27 @@ lib/
 
 ---
 
-## MVP Theme: Paper Mode (E-ink)
+## MVP Theme: Tactile E-Paper Mode (E-ink)
 
 Normal/dark theme is Phase 2. Do not add color, gradients, shadows, or animations to MVP code.
 
 | Property | Value |
 |---|---|
-| Background | `#F5F5F0` |
-| Ink | `#1A1A1A` |
-| Borders | 1.5dp solid `#1A1A1A` |
-| Cards | Border-only, no fill |
-| Animations | None — instant transitions |
+| Background (Parchment) | `#FAF9F5` |
+| Ink (Carbon Ink) | `#1A1C19` |
+| Surface Dim (Containers) | `#DADAD5` |
+| Slate Grey (Secondary Text) | `#444748` |
+| Borders / Stroke Weights | 1.5px solid standard, 2px thick outlines, 1.5px dashed dividers |
+| Diagonal Hatching | 1px stroke, 12px-14px spacing (used strictly for error/warning borders or backgrounds) |
+| Cards | Border-only (`#1A1C19`), optional transparent or `#DADAD5` fill |
+| Animations | None — instant page transitions (`InstantPageTransitionsBuilder`) |
 | Categories | ■ Work, ● Personal, ▲ Errand (shapes, not colors) |
-| Min tap target | 56dp |
-| Font | Inter (Google Fonts) |
+| Min tap target | 56px height |
+| Font | Newsreader (Google Fonts) on all text |
+| Min font size | 13px (no text below 13px to preserve readability on e-ink) |
+| Strikethrough | 2px thick horizontal line on completed items |
+| Modal barrier | Transparent (avoids dithered opacity patterns that ghost) |
+| Error banner | `HatchedErrorContainer` (hatched frame, solid text block to ensure legibility) |
 
 ---
 

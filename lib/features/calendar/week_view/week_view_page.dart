@@ -142,10 +142,22 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
 
     final weekdaysShort = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
+    final months = [
+      'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
+      'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'
+    ];
+    final endOfWeek = start.add(const Duration(days: 4));
+    final String titleText;
+    if (start.month == endOfWeek.month) {
+      titleText = months[start.month - 1];
+    } else {
+      titleText = '${months[start.month - 1]}/${months[endOfWeek.month - 1]}';
+    }
+
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
-        title: const Text('WEEK VIEW', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 0.5)),
+        title: Text(titleText, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 0.5)),
         actions: [
           IconButton(
             icon: const Icon(Icons.sync),
@@ -189,9 +201,16 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
                 builder: (context, snapshot) {
                   final items = snapshot.data ?? [];
 
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: List.generate(5, (index) {
+                  return CustomPaint(
+                    painter: DotGridPainter(
+                      color: theme.colorScheme.primary,
+                      dotRadius: 0.8,
+                      spacingX: 24.0,
+                      spacingY: 24.0,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: List.generate(5, (index) {
                       final dayDate = start.add(Duration(days: index));
                       final isToday = dayDate.year == DateTime.now().year &&
                           dayDate.month == DateTime.now().month &&
@@ -245,8 +264,8 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(vertical: 8.0),
                                     color: isToday 
-                                        ? theme.colorScheme.primary.withValues(alpha: 0.08) 
-                                        : Colors.transparent,
+                                        ? theme.colorScheme.surfaceContainer 
+                                        : theme.scaffoldBackgroundColor,
                                     child: Column(
                                       children: [
                                         Text(
@@ -316,10 +335,10 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
                                                 Text(
                                                   '${item.isComplete ? '☒ ' : ''}$shape${item.title}',
                                                   style: TextStyle(
-                                                    fontSize: 10,
+                                                    fontSize: 12,
                                                     fontWeight: FontWeight.bold,
                                                     decoration: item.isComplete ? TextDecoration.lineThrough : null,
-                                                    decorationThickness: 1.5,
+                                                    decorationThickness: item.isComplete ? 1.5 : null,
                                                   ),
                                                   maxLines: 4,
                                                   overflow: TextOverflow.ellipsis,
@@ -328,7 +347,7 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
                                                 Text(
                                                   _formatItemTime(item),
                                                   style: TextStyle(
-                                                    fontSize: 8.5,
+                                                    fontSize: 10,
                                                     color: theme.colorScheme.primary.withValues(alpha: 0.85),
                                                   ),
                                                 ),
@@ -346,8 +365,9 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
                         ),
                       );
                     }),
-                  );
-                },
+                  ),
+                );
+              },
               ),
             ),
 

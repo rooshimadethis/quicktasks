@@ -26,7 +26,7 @@ void main() {
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
-          homeWidgetSyncProvider.overrideWith((ref) => null),
+          homeWidgetSyncProvider.overrideWith((ref) {}),
           googleAuthNotifierProvider.overrideWith((ref) {
             return MockGoogleAuthNotifier(ref.watch(googleSignInProvider));
           }),

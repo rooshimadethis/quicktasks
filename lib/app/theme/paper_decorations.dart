@@ -7,7 +7,7 @@ class HatchPainter extends CustomPainter {
   const HatchPainter({
     this.color = const Color(0xFF1A1A1A),
     this.spacing = 14.0,
-    this.strokeWidth = 0.5,
+    this.strokeWidth = 1.0,
   });
 
   final Color color;
@@ -85,7 +85,7 @@ class HatchBackground extends StatelessWidget {
     super.key,
     required this.child,
     this.spacing = 14.0,
-    this.strokeWidth = 0.5,
+    this.strokeWidth = 1.0,
   });
 
   final Widget child;
@@ -112,7 +112,7 @@ class DashedLinePainter extends CustomPainter {
     this.color = const Color(0xFF1A1A1A),
     this.dashWidth = 4.0,
     this.dashSpace = 4.0,
-    this.strokeWidth = 1.0,
+    this.strokeWidth = 1.5,
     this.axis = Axis.horizontal,
   });
 
@@ -167,7 +167,7 @@ class DashedDivider extends StatelessWidget {
     this.height = 1.0,
     this.dashWidth = 4.0,
     this.dashSpace = 4.0,
-    this.strokeWidth = 1.0,
+    this.strokeWidth = 1.5,
     this.color,
     this.axis = Axis.horizontal,
   });
@@ -191,6 +191,76 @@ class DashedDivider extends StatelessWidget {
           dashSpace: dashSpace,
           strokeWidth: strokeWidth,
           axis: axis,
+        ),
+      ),
+    );
+  }
+}
+
+/// A dither-free tactile error container for e-ink.
+/// Features a thick diagonal hatched outer frame and a solid inner surface
+/// right behind the text to ensure absolute readability.
+class HatchedErrorContainer extends StatelessWidget {
+  const HatchedErrorContainer({
+    super.key,
+    required this.message,
+    this.title = 'ERROR',
+  });
+
+  final String message;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: theme.colorScheme.primary, width: 2.0),
+      ),
+      child: CustomPaint(
+        painter: HatchPainter(
+          color: theme.colorScheme.primary,
+          spacing: 12.0,
+          strokeWidth: 1.0,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            decoration: BoxDecoration(
+              color: theme.scaffoldBackgroundColor, // solid background right behind text
+              border: Border.all(color: theme.colorScheme.primary, width: 1.5),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    const Text('⚠️ ', style: TextStyle(fontSize: 14)),
+                    const SizedBox(width: 4),
+                    Text(
+                      title.toUpperCase(),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  message,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
