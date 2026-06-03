@@ -9,9 +9,10 @@ It's built for an e-ink Android phone as the primary device, so the design is hi
 ## Screenshots
 
 <p align="center">
-  <img src="assets/screenshots/day_view.png" width="32%" alt="Day View" />
-  <img src="assets/screenshots/week_view.png" width="32%" alt="Week View" />
-  <img src="assets/screenshots/item_bottom_sheet.png" width="32%" alt="Create/Edit Task Sheet" />
+  <img src="assets/screenshots/day_view.png" width="24%" alt="Day View" />
+  <img src="assets/screenshots/day_view_drag.png" width="24%" alt="Drag Preview" />
+  <img src="assets/screenshots/week_view.png" width="24%" alt="Week View" />
+  <img src="assets/screenshots/item_bottom_sheet.png" width="24%" alt="Create/Edit Task Sheet" />
 </p>
 
 ## Features
