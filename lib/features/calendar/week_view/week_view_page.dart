@@ -194,12 +194,15 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
         },
         child: Column(
           children: [
-            // 5-Column layout
+            // 5-Column layout with floating trays on top
             Expanded(
-              child: StreamBuilder<List<CalendarItem>>(
-                stream: itemsStream,
-                builder: (context, snapshot) {
-                  final items = snapshot.data ?? [];
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: StreamBuilder<List<CalendarItem>>(
+                      stream: itemsStream,
+                      builder: (context, snapshot) {
+                        final items = snapshot.data ?? [];
 
                   return CustomPaint(
                     painter: DotGridPainter(
@@ -328,7 +331,7 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
                                         left: 4.0,
                                         right: 6.0, // 4.0 visual padding + 2.0 shadow offset
                                         top: 4.0,
-                                        bottom: 6.0, // 4.0 visual padding + 2.0 shadow offset
+                                        bottom: 120.0, // 120.0 to scroll past overlay trays
                                       ),
                                       itemCount: dayItems.length,
                                       separatorBuilder: (context, idx) => const SizedBox(height: 6),
@@ -394,14 +397,25 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
                     }),
                   ),
                 );
-              },
+                  },
+                ),
               ),
-            ),
-
-            // Overdue and Backlog Trays at the bottom
-            const OverdueTrayWidget(),
-            const BacklogTrayWidget(),
-          ],
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const OverdueTrayWidget(),
+                    const BacklogTrayWidget(),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
         ),
       ),
           if (!authState.isInitialized)

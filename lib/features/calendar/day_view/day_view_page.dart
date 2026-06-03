@@ -694,13 +694,16 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                   ),
                 ),
 
-              // 3. Scrollable Timeline
+              // 3. Scrollable Timeline with floating trays on top
               Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final viewportWidth = constraints.maxWidth;
-                    final viewportHeight = constraints.maxHeight;
-                    return Stack(
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final viewportWidth = constraints.maxWidth;
+                          final viewportHeight = constraints.maxHeight;
+                          return Stack(
                       fit: StackFit.expand,
                       children: [
                         Listener(
@@ -957,6 +960,30 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                                         ),
                                       ),
 
+                                      if (isToday && currentX != null) ...[
+                                        Positioned(
+                                          left: currentX - 0.75,
+                                          top: 0,
+                                          bottom: 0,
+                                          child: Container(
+                                            width: 1.5,
+                                            color: theme.colorScheme.primary,
+                                          ),
+                                        ),
+                                        Positioned(
+                                          left: currentX - 4.0,
+                                          top: _headerHeight - 4.0,
+                                          child: Container(
+                                            width: 8.0,
+                                            height: 8.0,
+                                            decoration: BoxDecoration(
+                                              color: theme.colorScheme.primary,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+
                                       // Positioned chips
                                       ...positionedItems.map((pi) {
                                         final top =
@@ -1026,30 +1053,6 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                                           ),
                                         );
                                       }),
-
-                                      if (isToday && currentX != null) ...[
-                                        Positioned(
-                                          left: currentX - 0.75,
-                                          top: 0,
-                                          bottom: 0,
-                                          child: Container(
-                                            width: 1.5,
-                                            color: theme.colorScheme.primary,
-                                          ),
-                                        ),
-                                        Positioned(
-                                          left: currentX - 4.0,
-                                          top: _headerHeight - 4.0,
-                                          child: Container(
-                                            width: 8.0,
-                                            height: 8.0,
-                                            decoration: BoxDecoration(
-                                              color: theme.colorScheme.primary,
-                                              shape: BoxShape.circle,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
                                     ],
                                   ),
                                 );
@@ -1150,12 +1153,23 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                       ],
                     );
                   },
+                      ),
+                    ),
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const OverdueTrayWidget(),
+                          const BacklogTrayWidget(),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-
-              // 4. Overdue and Backlog trays anchored at the bottom
-              const OverdueTrayWidget(),
-              const BacklogTrayWidget(),
             ],
           );
         },
@@ -1224,12 +1238,25 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
         ],
       ),
       floatingActionButton: authState.isInitialized
-          ? FloatingActionButton(
-              onPressed: () {
-                // FAB creates a new task (no pre-filled time)
-                ItemBottomSheet.show(context);
-              },
-              child: const Icon(Icons.add, size: 28),
+          ? Container(
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.all(Radius.circular(4)),
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.colorScheme.primary,
+                    offset: const Offset(3.0, 3.0),
+                    blurRadius: 0.0,
+                    spreadRadius: 0.0,
+                  ),
+                ],
+              ),
+              child: FloatingActionButton(
+                onPressed: () {
+                  // FAB creates a new task (no pre-filled time)
+                  ItemBottomSheet.show(context);
+                },
+                child: const Icon(Icons.add, size: 28),
+              ),
             )
           : null,
     );
