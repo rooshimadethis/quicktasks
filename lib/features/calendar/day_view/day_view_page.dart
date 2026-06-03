@@ -52,6 +52,7 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
   // Timer for drag auto scrolling
   Timer? _autoScrollTimer;
   double? _dragPointerX; // true finger X, tracked via Listener
+  Offset? _dragPointerGlobalPosition; // true finger position, tracked via Listener
 
   Timer? _timeIndicatorTimer;
 
@@ -274,10 +275,16 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
 
   DateTime _calculateSlotTimeFromLocalX(
     double x,
-    List<CalendarItem> timelineItems,
-  ) {
+    List<CalendarItem> timelineItems, {
+    bool center = false,
+    Duration duration = const Duration(minutes: 30),
+  }) {
     final hourWidths = _calculateHourWidths(timelineItems);
-    final hourDec = _getHourDecOfCoordinate(x, hourWidths);
+    double hourDec = _getHourDecOfCoordinate(x, hourWidths);
+    if (center) {
+      final durationHours = duration.inMinutes / 60.0;
+      hourDec = (hourDec - durationHours / 2).clamp(0.0, 24.0);
+    }
     final hour = hourDec.floor().clamp(0, 23);
     final fracOfHour = hourDec - hour;
     final minute = ((fracOfHour * 60) / 30).round() * 30;
@@ -295,13 +302,20 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
 
   DateTime? _calculateSlotTime(
     Offset globalOffset,
-    List<CalendarItem> timelineItems,
-  ) {
+    List<CalendarItem> timelineItems, {
+    bool center = false,
+    Duration duration = const Duration(minutes: 30),
+  }) {
     final renderBox =
         _timelineGridKey.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox == null) return null;
     final localOffset = renderBox.globalToLocal(globalOffset);
-    return _calculateSlotTimeFromLocalX(localOffset.dx, timelineItems);
+    return _calculateSlotTimeFromLocalX(
+      localOffset.dx,
+      timelineItems,
+      center: center,
+      duration: duration,
+    );
   }
 
   void _autoScrollToFirstEvent(List<CalendarItem> items) {
@@ -585,8 +599,22 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
           const SizedBox(width: 8),
         ],
       ),
-      body: Stack(
-        children: [
+      body: Listener(
+        onPointerDown: (event) {
+          _dragPointerGlobalPosition = event.position;
+        },
+        onPointerMove: (event) {
+          _dragPointerX = event.position.dx;
+          _dragPointerGlobalPosition = event.position;
+        },
+        onPointerUp: (_) {
+          _dragPointerX = null;
+        },
+        onPointerCancel: (_) {
+          _dragPointerX = null;
+        },
+        child: Stack(
+          children: [
           StreamBuilder<List<CalendarItem>>(
         stream: itemsStream,
         builder: (context, snapshot) {
@@ -706,21 +734,21 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                           return Stack(
                       fit: StackFit.expand,
                       children: [
-                        Listener(
-                          onPointerMove: (event) {
-                            _dragPointerX = event.position.dx;
-                          },
-                          onPointerUp: (_) => _dragPointerX = null,
-                          onPointerCancel: (_) => _dragPointerX = null,
-                          child: SingleChildScrollView(
+                        SingleChildScrollView(
                             key: _timelineViewportKey,
                             controller: _scrollController,
                             scrollDirection: Axis.horizontal,
                             child: DragTarget<CalendarItem>(
                               onMove: (details) {
+                                final item = details.data;
+                                final duration = item.endAt != null && item.startAt != null
+                                    ? item.endAt!.difference(item.startAt!)
+                                    : const Duration(minutes: 30);
                                 final slotTime = _calculateSlotTime(
-                                  details.offset,
+                                  _dragPointerGlobalPosition ?? details.offset,
                                   timelineItems,
+                                  center: true,
+                                  duration: duration,
                                 );
                                 if (slotTime != null) {
                                   if (slotTime != _draggedSlotTimeNotifier.value ||
@@ -754,17 +782,18 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                                 _stopAutoScroll();
                                 _draggedSlotTimeNotifier.value = null;
                                 _draggedItemNotifier.value = null;
-                                final slotTime = _calculateSlotTime(
-                                  details.offset,
-                                  timelineItems,
-                                );
-                                if (slotTime == null) return;
-
                                 final item = details.data;
-                                final duration =
-                                    item.endAt != null && item.startAt != null
+                                final duration = item.endAt != null && item.startAt != null
                                     ? item.endAt!.difference(item.startAt!)
                                     : const Duration(minutes: 30);
+                                final slotTime = _calculateSlotTime(
+                                  _dragPointerGlobalPosition ?? details.offset,
+                                  timelineItems,
+                                  center: true,
+                                  duration: duration,
+                                );
+                                _dragPointerGlobalPosition = null;
+                                if (slotTime == null) return;
 
                                 final updated = item.copyWith(
                                   startAt: slotTime,
@@ -1072,7 +1101,6 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                               },
                             ),
                           ),
-                        ),
 
                         // Left & Right Overflow Badges
                         ValueListenableBuilder<double>(
@@ -1250,6 +1278,7 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
             ),
         ],
       ),
+    ),
       floatingActionButton: authState.isInitialized
           ? Container(
               decoration: BoxDecoration(

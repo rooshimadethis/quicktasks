@@ -52,7 +52,10 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
         return PopScope(
           canPop: false,
           child: AlertDialog(
-            title: const Text('SYNCING CALENDAR', style: TextStyle(fontWeight: FontWeight.bold)),
+            title: const Text(
+              'SYNCING CALENDAR',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -78,7 +81,11 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
         Navigator.pop(context); // Dismiss dialog
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(success ? 'Sync completed successfully.' : 'Sync failed. Please try again.'),
+            content: Text(
+              success
+                  ? 'Sync completed successfully.'
+                  : 'Sync failed. Please try again.',
+            ),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -143,8 +150,18 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
     final weekdaysShort = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
     final months = [
-      'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
-      'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'
+      'JANUARY',
+      'FEBRUARY',
+      'MARCH',
+      'APRIL',
+      'MAY',
+      'JUNE',
+      'JULY',
+      'AUGUST',
+      'SEPTEMBER',
+      'OCTOBER',
+      'NOVEMBER',
+      'DECEMBER',
     ];
     final endOfWeek = start.add(const Duration(days: 4));
     final String titleText;
@@ -157,7 +174,14 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
-        title: Text(titleText, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 0.5)),
+        title: Text(
+          titleText,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            letterSpacing: 0.5,
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.sync),
@@ -180,285 +204,494 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
       body: Stack(
         children: [
           GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onHorizontalDragEnd: (details) {
-          // Detect horizontal swipes to shift days
-          if (details.primaryVelocity == null) return;
-          if (details.primaryVelocity! < 0) {
-            // Swipe Left -> Shift forward by 2 days
-            _shiftCenterDate(2);
-          } else if (details.primaryVelocity! > 0) {
-            // Swipe Right -> Shift backward by 2 days
-            _shiftCenterDate(-2);
-          }
-        },
-        child: Column(
-          children: [
-            // 5-Column layout with floating trays on top
-            Expanded(
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: StreamBuilder<List<CalendarItem>>(
-                      stream: itemsStream,
-                      builder: (context, snapshot) {
-                        final items = snapshot.data ?? [];
+            behavior: HitTestBehavior.translucent,
+            onHorizontalDragEnd: (details) {
+              // Detect horizontal swipes to shift days
+              if (details.primaryVelocity == null) return;
+              if (details.primaryVelocity! < 0) {
+                // Swipe Left -> Shift forward by 2 days
+                _shiftCenterDate(2);
+              } else if (details.primaryVelocity! > 0) {
+                // Swipe Right -> Shift backward by 2 days
+                _shiftCenterDate(-2);
+              }
+            },
+            child: Column(
+              children: [
+                // 5-Column layout with floating trays on top
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: StreamBuilder<List<CalendarItem>>(
+                          stream: itemsStream,
+                          builder: (context, snapshot) {
+                            final items = snapshot.data ?? [];
 
-                  return CustomPaint(
-                    painter: DotGridPainter(
-                      color: theme.colorScheme.primary,
-                      dotRadius: 0.8,
-                      spacingX: 24.0,
-                      spacingY: 24.0,
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: List.generate(5, (index) {
-                      final dayDate = start.add(Duration(days: index));
-                      final isToday = dayDate.year == DateTime.now().year &&
-                          dayDate.month == DateTime.now().month &&
-                          dayDate.day == DateTime.now().day;
+                            return CustomPaint(
+                              painter: DotGridPainter(
+                                color: theme.colorScheme.primary,
+                                dotRadius: 0.8,
+                                spacingX: 24.0,
+                                spacingY: 24.0,
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: List.generate(5, (index) {
+                                  final dayDate = start.add(
+                                    Duration(days: index),
+                                  );
+                                  final isToday =
+                                      dayDate.year == DateTime.now().year &&
+                                      dayDate.month == DateTime.now().month &&
+                                      dayDate.day == DateTime.now().day;
 
-                      // Filter items for this day
-                      final dayItems = items.where((item) {
-                        if (item.startAt == null) return false;
-                        final startLocal = item.startAt!;
-                        return startLocal.year == dayDate.year &&
-                            startLocal.month == dayDate.month &&
-                            startLocal.day == dayDate.day;
-                      }).toList();
+                                  // Filter items for this day
+                                  final dayItems = items.where((item) {
+                                    if (item.startAt == null) return false;
+                                    final startLocal = item.startAt!;
+                                    return startLocal.year == dayDate.year &&
+                                        startLocal.month == dayDate.month &&
+                                        startLocal.day == dayDate.day;
+                                  }).toList();
 
-                      // Sort chronologically
-                      dayItems.sort((a, b) {
-                        if (a.isAllDay && !b.isAllDay) return -1;
-                        if (!a.isAllDay && b.isAllDay) return 1;
-                        if (a.startAt == null || b.startAt == null) return 0;
-                        return a.startAt!.compareTo(b.startAt!);
-                      });
+                                  // Sort chronologically
+                                  dayItems.sort((a, b) {
+                                    if (a.isAllDay && !b.isAllDay) return -1;
+                                    if (!a.isAllDay && b.isAllDay) return 1;
+                                    if (a.startAt == null || b.startAt == null) {
+                                      return 0;
+                                    }
+                                    return a.startAt!.compareTo(b.startAt!);
+                                  });
 
-                      final dayName = weekdaysShort[dayDate.weekday - 1];
-                      final dayNum = dayDate.day.toString();
+                                  final dayName =
+                                      weekdaysShort[dayDate.weekday - 1];
+                                  final dayNum = dayDate.day.toString();
 
-                      return Expanded(
-                        child: DragTarget<CalendarItem>(
-                          onWillAcceptWithDetails: (details) => true,
-                          onAcceptWithDetails: (details) async {
-                            HapticFeedback.heavyImpact();
-                            final item = details.data;
-                            final now = DateTime.now();
-                            final duration = item.endAt != null && item.startAt != null
-                                ? item.endAt!.difference(item.startAt!)
-                                : const Duration(minutes: 30);
-                            final targetStart = DateTime(
-                              dayDate.year,
-                              dayDate.month,
-                              dayDate.day,
-                              now.hour,
-                              now.minute,
-                            );
-                            final updated = item.copyWith(
-                              startAt: targetStart,
-                              endAt: targetStart.add(duration),
-                            );
-                            await repo.updateItem(updated);
-                            ref.read(googleCalendarServiceProvider).sync();
-                          },
-                          builder: (context, candidateData, rejectedData) {
-                            final isOver = candidateData.isNotEmpty;
-                            return Container(
-                              color: isOver ? theme.colorScheme.primary.withValues(alpha: 0.08) : Colors.transparent,
-                              child: Stack(
-                                children: [
-                                  if (index < 4)
-                                    Positioned(
-                                      top: 0,
-                                      bottom: 0,
-                                      right: 0,
-                                      child: DashedDivider(
-                                        axis: Axis.vertical,
-                                        dashWidth: 4,
-                                        dashSpace: 4,
-                                        strokeWidth: 1.2,
-                                        color: theme.colorScheme.primary.withValues(alpha: 0.6),
-                                      ),
-                                    ),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                                    children: [
-                                      Material(
-                                        color: theme.colorScheme.primary,
-                                        child: InkWell(
-                                          onTap: () {
-                                            HapticFeedback.selectionClick();
-                                            context.go('/day');
-                                          },
-                                          child: Row(
-                                            children: [
-                                              Expanded(
-                                                child: Padding(
-                                                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                                                  child: Column(
-                                                    children: [
-                                                      Text(
-                                                        dayName,
-                                                        style: TextStyle(
-                                                          fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-                                                          fontSize: 11,
-                                                          color: theme.scaffoldBackgroundColor,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 2),
-                                                      Text(
-                                                        dayNum,
-                                                        style: TextStyle(
-                                                          fontWeight: FontWeight.bold,
-                                                          fontSize: 17,
-                                                          color: theme.scaffoldBackgroundColor,
-                                                          decoration: isToday ? TextDecoration.underline : null,
-                                                          decorationColor: theme.scaffoldBackgroundColor,
-                                                          decorationThickness: isToday ? 2.0 : null,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                              if (index < 4)
-                                                Container(
-                                                  width: 0.8,
-                                                  height: 40,
-                                                  color: theme.scaffoldBackgroundColor,
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-
-                                      // Items list for this day
-                                      Expanded(
-                                        child: GestureDetector(
-                                          behavior: HitTestBehavior.opaque,
-                                          onTap: () {
-                                            HapticFeedback.lightImpact();
-                                            final now = DateTime.now();
-                                            final prefilledTime = DateTime(
+                                  return Expanded(
+                                    child: DragTarget<CalendarItem>(
+                                      onWillAcceptWithDetails: (details) =>
+                                          true,
+                                      onAcceptWithDetails: (details) async {
+                                        HapticFeedback.heavyImpact();
+                                        final item = details.data;
+                                        final now = DateTime.now();
+                                        final duration =
+                                            item.endAt != null &&
+                                                item.startAt != null
+                                            ? item.endAt!.difference(
+                                                item.startAt!,
+                                              )
+                                            : const Duration(minutes: 30);
+                                        final targetStart = DateTime(
+                                          dayDate.year,
+                                          dayDate.month,
+                                          dayDate.day,
+                                          now.hour,
+                                          now.minute,
+                                        );
+                                        final updated = item.copyWith(
+                                          startAt: targetStart,
+                                          endAt: targetStart.add(duration),
+                                        );
+                                        await repo.updateItem(updated);
+                                        ref
+                                            .read(googleCalendarServiceProvider)
+                                            .sync();
+                                      },
+                                      builder: (context, candidateData, rejectedData) {
+                                        final isOver = candidateData.isNotEmpty;
+                                        
+                                        // Construct the list of items to display, adding a skeleton if dragged over
+                                        final draggedItem = candidateData.isNotEmpty ? candidateData.first : null;
+                                        final List<CalendarItem> displayItems = List.from(dayItems);
+                                        
+                                        if (draggedItem != null) {
+                                          displayItems.removeWhere((item) => item.localId == draggedItem.localId);
+                                          final now = DateTime.now();
+                                          final skeletonItem = draggedItem.copyWith(
+                                            localId: '__skeleton__',
+                                            startAt: DateTime(
                                               dayDate.year,
                                               dayDate.month,
                                               dayDate.day,
                                               now.hour,
                                               now.minute,
-                                            );
-                                            ItemBottomSheet.show(
-                                              context,
-                                              prefilledStart: prefilledTime,
-                                            );
-                                          },
-                                          child: ListView.separated(
-                                            padding: const EdgeInsets.only(
-                                              left: 4.0,
-                                              right: 6.0, // 4.0 visual padding + 2.0 shadow offset
-                                              top: 4.0,
-                                              bottom: 120.0, // 120.0 to scroll past overlay trays
                                             ),
-                                            itemCount: dayItems.length,
-                                            separatorBuilder: (context, idx) => const SizedBox(height: 6),
-                                            itemBuilder: (context, idx) {
-                                              final item = dayItems[idx];
-                                              final shape = _getCategoryShape(item.category);
+                                          );
+                                          displayItems.add(skeletonItem);
+                                          displayItems.sort((a, b) {
+                                            if (a.isAllDay && !b.isAllDay) return -1;
+                                            if (!a.isAllDay && b.isAllDay) return 1;
+                                            if (a.startAt == null || b.startAt == null) return 0;
+                                            return a.startAt!.compareTo(b.startAt!);
+                                          });
+                                        }
 
-                                              return InkWell(
-                                                onTap: () {
-                                                  HapticFeedback.lightImpact();
-                                                  ItemBottomSheet.show(context, initialItem: item);
-                                                },
-                                                onDoubleTap: () async {
-                                                  HapticFeedback.lightImpact();
-                                                  final updated = item.copyWith(
-                                                    isComplete: !item.isComplete,
-                                                    completedAt: !item.isComplete
-                                                        ? DateTime.now()
-                                                        : null,
-                                                  );
-                                                  await repo.updateItem(updated);
-                                                  ref.read(googleCalendarServiceProvider).sync();
-                                                },
-                                                child: Container(
-                                                  padding: const EdgeInsets.all(6.0),
-                                                  decoration: BoxDecoration(
-                                                    border: Border.all(color: theme.colorScheme.primary, width: 1.0),
-                                                    borderRadius: BorderRadius.circular(4),
-                                                    color: theme.scaffoldBackgroundColor,
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color: theme.colorScheme.primary,
-                                                        offset: const Offset(2.0, 2.0),
-                                                        blurRadius: 0.0,
-                                                        spreadRadius: 0.0,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Text(
-                                                        '${item.isComplete ? '☒ ' : ''}$shape${item.title}',
-                                                        style: TextStyle(
-                                                          fontSize: 12,
-                                                          fontWeight: FontWeight.bold,
-                                                          decoration: item.isComplete ? TextDecoration.lineThrough : null,
-                                                          decorationThickness: item.isComplete ? 1.5 : null,
-                                                        ),
-                                                        maxLines: 4,
-                                                        overflow: TextOverflow.ellipsis,
-                                                      ),
-                                                      const SizedBox(height: 2),
-                                                      Text(
-                                                        _formatItemTime(item),
-                                                        style: TextStyle(
-                                                          fontSize: 10,
-                                                          color: theme.colorScheme.primary.withValues(alpha: 0.85),
-                                                        ),
-                                                      ),
-                                                    ],
+                                        return Container(
+                                          color: isOver
+                                              ? theme.colorScheme.primary
+                                                    .withValues(alpha: 0.08)
+                                              : Colors.transparent,
+                                          child: Stack(
+                                            children: [
+                                              if (index < 4)
+                                                Positioned(
+                                                  top: 0,
+                                                  bottom: 0,
+                                                  right: 0,
+                                                  child: DashedDivider(
+                                                    axis: Axis.vertical,
+                                                    dashWidth: 4,
+                                                    dashSpace: 4,
+                                                    strokeWidth: 1.2,
+                                                    color: theme
+                                                        .colorScheme
+                                                        .primary
+                                                        .withValues(alpha: 0.6),
                                                   ),
                                                 ),
-                                              );
-                                            },
+                                              Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.stretch,
+                                                children: [
+                                                  Material(
+                                                    color: theme
+                                                        .colorScheme
+                                                        .primary,
+                                                    child: InkWell(
+                                                      onTap: () {
+                                                        HapticFeedback.selectionClick();
+                                                        context.go('/day');
+                                                      },
+                                                      child: Row(
+                                                        children: [
+                                                          Expanded(
+                                                            child: Padding(
+                                                              padding:
+                                                                  const EdgeInsets.symmetric(
+                                                                    vertical:
+                                                                        8.0,
+                                                                  ),
+                                                              child: Column(
+                                                                children: [
+                                                                  Text(
+                                                                    dayName,
+                                                                    style: TextStyle(
+                                                                      fontWeight:
+                                                                          isToday
+                                                                          ? FontWeight.bold
+                                                                          : FontWeight.normal,
+                                                                      fontSize:
+                                                                          11,
+                                                                      color: theme
+                                                                          .scaffoldBackgroundColor,
+                                                                    ),
+                                                                  ),
+                                                                  const SizedBox(
+                                                                    height: 2,
+                                                                  ),
+                                                                  Text(
+                                                                    dayNum,
+                                                                    style: TextStyle(
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold,
+                                                                      fontSize:
+                                                                          17,
+                                                                      color: theme
+                                                                          .scaffoldBackgroundColor,
+                                                                      decoration:
+                                                                          isToday
+                                                                          ? TextDecoration.underline
+                                                                          : null,
+                                                                      decorationColor:
+                                                                          theme
+                                                                              .scaffoldBackgroundColor,
+                                                                      decorationThickness:
+                                                                          isToday
+                                                                          ? 2.0
+                                                                          : null,
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          if (index < 4)
+                                                            Container(
+                                                              width: 0.8,
+                                                              height: 40,
+                                                              color: theme
+                                                                  .scaffoldBackgroundColor,
+                                                            ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+
+                                                  // Items list for this day
+                                                  Expanded(
+                                                    child: GestureDetector(
+                                                      behavior: HitTestBehavior
+                                                          .opaque,
+                                                      onTap: () {
+                                                        HapticFeedback.lightImpact();
+                                                        final now =
+                                                            DateTime.now();
+                                                        final prefilledTime =
+                                                            DateTime(
+                                                              dayDate.year,
+                                                              dayDate.month,
+                                                              dayDate.day,
+                                                              now.hour,
+                                                              now.minute,
+                                                            );
+                                                        ItemBottomSheet.show(
+                                                          context,
+                                                          prefilledStart:
+                                                              prefilledTime,
+                                                        );
+                                                      },
+                                                      child: ListView.separated(
+                                                        padding: const EdgeInsets.only(
+                                                          left: 4.0,
+                                                          right:
+                                                              6.0, // 4.0 visual padding + 2.0 shadow offset
+                                                          top: 4.0,
+                                                          bottom:
+                                                              120.0, // 120.0 to scroll past overlay trays
+                                                        ),
+                                                        itemCount:
+                                                            displayItems.length,
+                                                        separatorBuilder:
+                                                            (context, idx) =>
+                                                                const SizedBox(
+                                                                  height: 6,
+                                                                ),
+                                                        itemBuilder: (context, idx) {
+                                                          final item =
+                                                              displayItems[idx];
+                                                          final shape =
+                                                              _getCategoryShape(
+                                                                item.category,
+                                                              );
+
+                                                          if (item.localId == '__skeleton__') {
+                                                            return Container(
+                                                              constraints: const BoxConstraints(minHeight: 56.0),
+                                                              decoration: BoxDecoration(
+                                                                color: theme.scaffoldBackgroundColor,
+                                                                border: Border.all(
+                                                                  color: theme.colorScheme.primary.withValues(alpha: 0.4),
+                                                                  width: 1.0,
+                                                                ),
+                                                                borderRadius: BorderRadius.circular(4),
+                                                                boxShadow: [
+                                                                  BoxShadow(
+                                                                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                                                                    offset: const Offset(2.0, 2.0),
+                                                                    blurRadius: 0.0,
+                                                                    spreadRadius: 0.0,
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                              child: CustomPaint(
+                                                                painter: HatchPainter(
+                                                                  color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                                                                  spacing: 10.0,
+                                                                  strokeWidth: 0.8,
+                                                                ),
+                                                                child: Padding(
+                                                                  padding: const EdgeInsets.all(6.0),
+                                                                  child: Row(
+                                                                    children: [
+                                                                      SizedBox(
+                                                                        width: 32,
+                                                                        height: 32,
+                                                                        child: Checkbox(
+                                                                          value: item.isComplete,
+                                                                          onChanged: null,
+                                                                        ),
+                                                                      ),
+                                                                      const SizedBox(width: 4),
+                                                                      Container(
+                                                                        width: 1.0,
+                                                                        height: 32,
+                                                                        color: theme.colorScheme.secondary.withValues(alpha: 0.3),
+                                                                      ),
+                                                                      const SizedBox(width: 8),
+                                                                      Expanded(
+                                                                        child: Text(
+                                                                          '$shape${item.title}',
+                                                                          style: theme.textTheme.bodyMedium?.copyWith(
+                                                                            fontWeight: FontWeight.bold,
+                                                                            fontSize: 12,
+                                                                            color: theme.colorScheme.primary.withValues(alpha: 0.4),
+                                                                          ),
+                                                                          maxLines: 4,
+                                                                          overflow: TextOverflow.ellipsis,
+                                                                        ),
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            );
+                                                          }
+
+                                                          return InkWell(
+                                                            onTap: () {
+                                                              HapticFeedback.lightImpact();
+                                                              ItemBottomSheet.show(
+                                                                context,
+                                                                initialItem:
+                                                                    item,
+                                                              );
+                                                            },
+                                                            onDoubleTap: () async {
+                                                              HapticFeedback.lightImpact();
+                                                              final updated = item.copyWith(
+                                                                isComplete: !item
+                                                                    .isComplete,
+                                                                completedAt:
+                                                                    !item
+                                                                        .isComplete
+                                                                    ? DateTime.now()
+                                                                    : null,
+                                                              );
+                                                              await repo
+                                                                  .updateItem(
+                                                                    updated,
+                                                                  );
+                                                              ref
+                                                                  .read(
+                                                                    googleCalendarServiceProvider,
+                                                                  )
+                                                                  .sync();
+                                                            },
+                                                            child: Container(
+                                                              padding:
+                                                                  const EdgeInsets.all(
+                                                                    6.0,
+                                                                  ),
+                                                              decoration: BoxDecoration(
+                                                                border: Border.all(
+                                                                  color: theme
+                                                                      .colorScheme
+                                                                      .primary,
+                                                                  width: 1.0,
+                                                                ),
+                                                                borderRadius:
+                                                                    BorderRadius.circular(
+                                                                      4,
+                                                                    ),
+                                                                color: theme
+                                                                    .scaffoldBackgroundColor,
+                                                                boxShadow: [
+                                                                  BoxShadow(
+                                                                    color: theme
+                                                                        .colorScheme
+                                                                        .primary,
+                                                                    offset:
+                                                                        const Offset(
+                                                                          2.0,
+                                                                          2.0,
+                                                                        ),
+                                                                    blurRadius:
+                                                                        0.0,
+                                                                    spreadRadius:
+                                                                        0.0,
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                              child: Column(
+                                                                crossAxisAlignment:
+                                                                    CrossAxisAlignment
+                                                                        .start,
+                                                                children: [
+                                                                  Text(
+                                                                    '${item.isComplete ? '☒ ' : ''}$shape${item.title}',
+                                                                    style: TextStyle(
+                                                                      fontSize:
+                                                                          12,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold,
+                                                                      decoration:
+                                                                          item.isComplete
+                                                                          ? TextDecoration.lineThrough
+                                                                          : null,
+                                                                      decorationThickness:
+                                                                          item.isComplete
+                                                                          ? 1.5
+                                                                          : null,
+                                                                    ),
+                                                                    maxLines: 4,
+                                                                    overflow:
+                                                                        TextOverflow
+                                                                            .ellipsis,
+                                                                  ),
+                                                                  const SizedBox(
+                                                                    height: 2,
+                                                                  ),
+                                                                  Text(
+                                                                    _formatItemTime(
+                                                                      item,
+                                                                    ),
+                                                                    style: TextStyle(
+                                                                      fontSize:
+                                                                          10,
+                                                                      color: theme
+                                                                          .colorScheme
+                                                                          .primary
+                                                                          .withValues(
+                                                                            alpha:
+                                                                                0.85,
+                                                                          ),
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          );
+                                                        },
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
                                           ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                                        );
+                                      },
+                                    ),
+                                  );
+                                }),
                               ),
                             );
                           },
                         ),
-                      );
-                    }),
+                      ),
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const OverdueTrayWidget(),
+                            const BacklogTrayWidget(),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                );
-                  },
                 ),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const OverdueTrayWidget(),
-                    const BacklogTrayWidget(),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
-        ),
-      ),
           if (!authState.isInitialized)
             Positioned.fill(
               child: Container(
@@ -469,7 +702,10 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
                     padding: const EdgeInsets.all(16.0),
                     decoration: BoxDecoration(
                       color: theme.scaffoldBackgroundColor,
-                      border: Border.all(color: theme.colorScheme.primary, width: 2.0),
+                      border: Border.all(
+                        color: theme.colorScheme.primary,
+                        width: 2.0,
+                      ),
                       boxShadow: [
                         BoxShadow(
                           color: theme.colorScheme.primary,
