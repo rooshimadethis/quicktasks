@@ -255,40 +255,54 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                // Column Header
-                                InkWell(
-                                  onTap: () {
-                                    HapticFeedback.selectionClick();
-                                    context.go('/day');
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                                    color: isToday 
-                                        ? theme.colorScheme.surfaceContainer 
-                                        : theme.scaffoldBackgroundColor,
-                                    child: Column(
-                                      children: [
-                                        Text(
-                                          dayName,
-                                          style: TextStyle(
-                                            fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-                                            fontSize: 10,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          dayNum,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                            decoration: isToday ? TextDecoration.underline : null,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                Divider(height: 1, thickness: 1, color: theme.colorScheme.primary),
+                                 Material(
+                                   color: theme.colorScheme.primary,
+                                   child: InkWell(
+                                     onTap: () {
+                                       HapticFeedback.selectionClick();
+                                       context.go('/day');
+                                     },
+                                     child: Row(
+                                       children: [
+                                         Expanded(
+                                           child: Padding(
+                                             padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                             child: Column(
+                                               children: [
+                                                 Text(
+                                                   dayName,
+                                                   style: TextStyle(
+                                                     fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                                                     fontSize: 11,
+                                                     color: theme.scaffoldBackgroundColor,
+                                                   ),
+                                                 ),
+                                                 const SizedBox(height: 2),
+                                                 Text(
+                                                   dayNum,
+                                                   style: TextStyle(
+                                                     fontWeight: FontWeight.bold,
+                                                     fontSize: 17,
+                                                     color: theme.scaffoldBackgroundColor,
+                                                     decoration: isToday ? TextDecoration.underline : null,
+                                                     decorationColor: theme.scaffoldBackgroundColor,
+                                                     decorationThickness: isToday ? 2.0 : null,
+                                                   ),
+                                                 ),
+                                               ],
+                                             ),
+                                           ),
+                                         ),
+                                          if (index < 4)
+                                            Container(
+                                              width: 0.8,
+                                              height: 40,
+                                              color: theme.scaffoldBackgroundColor,
+                                            ),
+                                       ],
+                                     ),
+                                   ),
+                                 ),
 
                                 // Items list for this day
                                 Expanded(
@@ -310,9 +324,14 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
                                       );
                                     },
                                     child: ListView.separated(
-                                      padding: const EdgeInsets.all(4.0),
+                                      padding: const EdgeInsets.only(
+                                        left: 4.0,
+                                        right: 6.0, // 4.0 visual padding + 2.0 shadow offset
+                                        top: 4.0,
+                                        bottom: 6.0, // 4.0 visual padding + 2.0 shadow offset
+                                      ),
                                       itemCount: dayItems.length,
-                                      separatorBuilder: (context, idx) => const SizedBox(height: 4),
+                                      separatorBuilder: (context, idx) => const SizedBox(height: 6),
                                       itemBuilder: (context, idx) {
                                         final item = dayItems[idx];
                                         final shape = _getCategoryShape(item.category);
@@ -328,6 +347,14 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
                                               border: Border.all(color: theme.colorScheme.primary, width: 1.0),
                                               borderRadius: BorderRadius.circular(4),
                                               color: theme.scaffoldBackgroundColor,
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: theme.colorScheme.primary,
+                                                  offset: const Offset(2.0, 2.0),
+                                                  blurRadius: 0.0,
+                                                  spreadRadius: 0.0,
+                                                ),
+                                              ],
                                             ),
                                             child: Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -382,19 +409,55 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
               child: Container(
                 color: theme.scaffoldBackgroundColor,
                 child: Center(
-                  child: AlertDialog(
-                    title: const Text(
-                      'CONNECTING TO GOOGLE',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                  child: Container(
+                    width: 280,
+                    padding: const EdgeInsets.all(16.0),
+                    decoration: BoxDecoration(
+                      color: theme.scaffoldBackgroundColor,
+                      border: Border.all(color: theme.colorScheme.primary, width: 2.0),
+                      boxShadow: [
+                        BoxShadow(
+                          color: theme.colorScheme.primary,
+                          offset: const Offset(3.0, 3.0),
+                          blurRadius: 0.0,
+                          spreadRadius: 0.0,
+                        ),
+                      ],
                     ),
-                    content: const Column(
+                    child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('[ PLEASE WAIT ]', style: TextStyle(fontWeight: FontWeight.bold)),
-                        SizedBox(height: 16),
+                        Text(
+                          'CONNECTING TO GOOGLE',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: theme.colorScheme.primary,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          height: 1.5,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          '[ PLEASE WAIT ]',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                         Text(
                           'Checking sign-in status...',
                           textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ],
                     ),

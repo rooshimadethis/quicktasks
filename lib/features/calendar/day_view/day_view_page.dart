@@ -1165,19 +1165,55 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
               child: Container(
                 color: theme.scaffoldBackgroundColor,
                 child: Center(
-                  child: AlertDialog(
-                    title: const Text(
-                      'CONNECTING TO GOOGLE',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                  child: Container(
+                    width: 280,
+                    padding: const EdgeInsets.all(16.0),
+                    decoration: BoxDecoration(
+                      color: theme.scaffoldBackgroundColor,
+                      border: Border.all(color: theme.colorScheme.primary, width: 2.0),
+                      boxShadow: [
+                        BoxShadow(
+                          color: theme.colorScheme.primary,
+                          offset: const Offset(3.0, 3.0),
+                          blurRadius: 0.0,
+                          spreadRadius: 0.0,
+                        ),
+                      ],
                     ),
-                    content: const Column(
+                    child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('[ PLEASE WAIT ]', style: TextStyle(fontWeight: FontWeight.bold)),
-                        SizedBox(height: 16),
+                        Text(
+                          'CONNECTING TO GOOGLE',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: theme.colorScheme.primary,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          height: 1.5,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          '[ PLEASE WAIT ]',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                         Text(
                           'Checking sign-in status...',
                           textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ],
                     ),

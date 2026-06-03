@@ -190,6 +190,10 @@ class CalendarItemRepository {
       try {
         return await action();
       } catch (e) {
+        // Immediately fail without retrying if it's a permanent API error (e.g. read-only calendar or bad request)
+        if (e is cal.DetailedApiRequestError && (e.status == 400 || e.status == 403 || e.status == 404)) {
+          rethrow;
+        }
         attempts++;
         if (attempts >= retries) {
           rethrow;
@@ -210,7 +214,7 @@ class CalendarItemRepository {
     // 2. Identify or create the dedicated "QuickTasks" calendar
     String? quicktasksCalId;
     final quicktasksEntry = calendars.firstWhere(
-      (c) => c.summary == 'QuickTasks',
+      (c) => c.summary == 'QuickTasks' && (c.accessRole == 'owner' || c.accessRole == 'writer'),
       orElse: () => cal.CalendarListEntry(), // returns an empty entry instead of null
     );
 
@@ -225,6 +229,14 @@ class CalendarItemRepository {
       throw Exception('Failed to resolve or create QuickTasks calendar ID.');
     }
 
+    // Build a set of writable calendar IDs from the user's calendars
+    final writableCalendarIds = calendars
+        .where((c) => c.id != null && (c.accessRole == 'owner' || c.accessRole == 'writer'))
+        .map((c) => c.id!)
+        .toSet();
+    // QuickTasks is always writable since we verified or created it
+    writableCalendarIds.add(quicktasksCalId);
+
     // 3. Collect active calendars (QuickTasks + other selected calendars)
     final syncCalendarIds = <String>{quicktasksCalId};
     for (final entry in calendars) {
@@ -234,7 +246,7 @@ class CalendarItemRepository {
     }
 
     // 4. Push local changes (pendingCreate, pendingUpdate, pendingDelete)
-    await _pushPendingChanges(apiClient, quicktasksCalId);
+    await _pushPendingChanges(apiClient, quicktasksCalId, writableCalendarIds);
 
     // 5. Pull changes for each selected calendar (incremental / full window sync)
     for (final calendarId in syncCalendarIds) {
@@ -244,7 +256,11 @@ class CalendarItemRepository {
   }
 
   /// Pushes all locally pending creations, updates, and deletions to Google Calendar.
-  Future<void> _pushPendingChanges(GCalApiClient apiClient, String quicktasksCalId) async {
+  Future<void> _pushPendingChanges(
+    GCalApiClient apiClient,
+    String quicktasksCalId,
+    Set<String> writableCalendarIds,
+  ) async {
     final pendingEntities = await _dao.getPendingSyncItems();
 
     for (final entity in pendingEntities) {
@@ -253,6 +269,15 @@ class CalendarItemRepository {
       final calendarId = item.googleCalendarId == 'quicktasks'
           ? quicktasksCalId
           : item.googleCalendarId;
+
+      // Skip push if we know the destination calendar is read-only
+      if (!writableCalendarIds.contains(calendarId)) {
+        developer.log('Skipping push for item ${item.localId}: calendar $calendarId is read-only.');
+        // Revert to synced state locally to stop infinite sync retries
+        final revertedItem = item.copyWith(syncStatus: SyncStatus.synced);
+        await _dao.upsertItem(_mapModelToEntity(revertedItem));
+        continue;
+      }
 
       try {
         if (item.syncStatus == SyncStatus.pendingCreate) {
@@ -285,6 +310,14 @@ class CalendarItemRepository {
         }
       } catch (e, stack) {
         developer.log('Error pushing pending sync item ${item.localId} to GCal', error: e, stackTrace: stack);
+
+        // If GCal returns a permanent error (like 403 read-only or 400 bad request), 
+        // immediately reset its sync status to synced locally to avoid loop hangs.
+        if (e is cal.DetailedApiRequestError && (e.status == 403 || e.status == 400)) {
+          developer.log('Permanent write error ${e.status}: resetting item ${item.localId} sync status to synced.');
+          final revertedItem = item.copyWith(syncStatus: SyncStatus.synced);
+          await _dao.upsertItem(_mapModelToEntity(revertedItem));
+        }
       }
     }
   }
