@@ -214,6 +214,17 @@ class CalendarItem {
         event.start = cal.EventDateTime(dateTime: startAt!.toUtc());
         event.end = cal.EventDateTime(dateTime: endAt!.toUtc());
       }
+
+      // Set a popup notification at the exact start time of the event
+      event.reminders = cal.EventReminders(
+        useDefault: false,
+        overrides: [
+          cal.EventReminder(
+            method: 'popup',
+            minutes: 0,
+          ),
+        ],
+      );
     }
 
     // Set private properties for completion & task metadata
