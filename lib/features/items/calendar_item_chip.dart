@@ -5,12 +5,14 @@ import 'package:quicktasks/domain/models/calendar_item.dart';
 class CalendarItemChip extends StatelessWidget {
   final CalendarItem item;
   final VoidCallback? onTap;
+  final VoidCallback? onDoubleTap;
   final VoidCallback? onComplete;
 
   const CalendarItemChip({
     super.key,
     required this.item,
     this.onTap,
+    this.onDoubleTap,
     this.onComplete,
   });
 
@@ -69,6 +71,7 @@ class CalendarItemChip extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
+      onDoubleTap: onDoubleTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
         decoration: BoxDecoration(

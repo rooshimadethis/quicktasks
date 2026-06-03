@@ -240,158 +240,199 @@ class _WeekViewPageState extends ConsumerState<WeekViewPage> {
                       final dayNum = dayDate.day.toString();
 
                       return Expanded(
-                        child: Stack(
-                          children: [
-                            if (index < 4)
-                              Positioned(
-                                top: 0,
-                                bottom: 0,
-                                right: 0,
-                                child: DashedDivider(
-                                  axis: Axis.vertical,
-                                  dashWidth: 4,
-                                  dashSpace: 4,
-                                  strokeWidth: 1.2,
-                                  color: theme.colorScheme.primary.withValues(alpha: 0.6),
-                                ),
-                              ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                 Material(
-                                   color: theme.colorScheme.primary,
-                                   child: InkWell(
-                                     onTap: () {
-                                       HapticFeedback.selectionClick();
-                                       context.go('/day');
-                                     },
-                                     child: Row(
-                                       children: [
-                                         Expanded(
-                                           child: Padding(
-                                             padding: const EdgeInsets.symmetric(vertical: 8.0),
-                                             child: Column(
-                                               children: [
-                                                 Text(
-                                                   dayName,
-                                                   style: TextStyle(
-                                                     fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-                                                     fontSize: 11,
-                                                     color: theme.scaffoldBackgroundColor,
-                                                   ),
-                                                 ),
-                                                 const SizedBox(height: 2),
-                                                 Text(
-                                                   dayNum,
-                                                   style: TextStyle(
-                                                     fontWeight: FontWeight.bold,
-                                                     fontSize: 17,
-                                                     color: theme.scaffoldBackgroundColor,
-                                                     decoration: isToday ? TextDecoration.underline : null,
-                                                     decorationColor: theme.scaffoldBackgroundColor,
-                                                     decorationThickness: isToday ? 2.0 : null,
-                                                   ),
-                                                 ),
-                                               ],
-                                             ),
-                                           ),
-                                         ),
-                                          if (index < 4)
-                                            Container(
-                                              width: 0.8,
-                                              height: 40,
-                                              color: theme.scaffoldBackgroundColor,
-                                            ),
-                                       ],
-                                     ),
-                                   ),
-                                 ),
-
-                                // Items list for this day
-                                Expanded(
-                                  child: GestureDetector(
-                                    behavior: HitTestBehavior.opaque,
-                                    onTap: () {
-                                      HapticFeedback.lightImpact();
-                                      final now = DateTime.now();
-                                      final prefilledTime = DateTime(
-                                        dayDate.year,
-                                        dayDate.month,
-                                        dayDate.day,
-                                        now.hour,
-                                        now.minute,
-                                      );
-                                      ItemBottomSheet.show(
-                                        context,
-                                        prefilledStart: prefilledTime,
-                                      );
-                                    },
-                                    child: ListView.separated(
-                                      padding: const EdgeInsets.only(
-                                        left: 4.0,
-                                        right: 6.0, // 4.0 visual padding + 2.0 shadow offset
-                                        top: 4.0,
-                                        bottom: 120.0, // 120.0 to scroll past overlay trays
+                        child: DragTarget<CalendarItem>(
+                          onWillAcceptWithDetails: (details) => true,
+                          onAcceptWithDetails: (details) async {
+                            HapticFeedback.heavyImpact();
+                            final item = details.data;
+                            final now = DateTime.now();
+                            final duration = item.endAt != null && item.startAt != null
+                                ? item.endAt!.difference(item.startAt!)
+                                : const Duration(minutes: 30);
+                            final targetStart = DateTime(
+                              dayDate.year,
+                              dayDate.month,
+                              dayDate.day,
+                              now.hour,
+                              now.minute,
+                            );
+                            final updated = item.copyWith(
+                              startAt: targetStart,
+                              endAt: targetStart.add(duration),
+                            );
+                            await repo.updateItem(updated);
+                            ref.read(googleCalendarServiceProvider).sync();
+                          },
+                          builder: (context, candidateData, rejectedData) {
+                            final isOver = candidateData.isNotEmpty;
+                            return Container(
+                              color: isOver ? theme.colorScheme.primary.withValues(alpha: 0.08) : Colors.transparent,
+                              child: Stack(
+                                children: [
+                                  if (index < 4)
+                                    Positioned(
+                                      top: 0,
+                                      bottom: 0,
+                                      right: 0,
+                                      child: DashedDivider(
+                                        axis: Axis.vertical,
+                                        dashWidth: 4,
+                                        dashSpace: 4,
+                                        strokeWidth: 1.2,
+                                        color: theme.colorScheme.primary.withValues(alpha: 0.6),
                                       ),
-                                      itemCount: dayItems.length,
-                                      separatorBuilder: (context, idx) => const SizedBox(height: 6),
-                                      itemBuilder: (context, idx) {
-                                        final item = dayItems[idx];
-                                        final shape = _getCategoryShape(item.category);
+                                    ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      Material(
+                                        color: theme.colorScheme.primary,
+                                        child: InkWell(
+                                          onTap: () {
+                                            HapticFeedback.selectionClick();
+                                            context.go('/day');
+                                          },
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                child: Padding(
+                                                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                                  child: Column(
+                                                    children: [
+                                                      Text(
+                                                        dayName,
+                                                        style: TextStyle(
+                                                          fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                                                          fontSize: 11,
+                                                          color: theme.scaffoldBackgroundColor,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 2),
+                                                      Text(
+                                                        dayNum,
+                                                        style: TextStyle(
+                                                          fontWeight: FontWeight.bold,
+                                                          fontSize: 17,
+                                                          color: theme.scaffoldBackgroundColor,
+                                                          decoration: isToday ? TextDecoration.underline : null,
+                                                          decorationColor: theme.scaffoldBackgroundColor,
+                                                          decorationThickness: isToday ? 2.0 : null,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                              if (index < 4)
+                                                Container(
+                                                  width: 0.8,
+                                                  height: 40,
+                                                  color: theme.scaffoldBackgroundColor,
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
 
-                                        return InkWell(
+                                      // Items list for this day
+                                      Expanded(
+                                        child: GestureDetector(
+                                          behavior: HitTestBehavior.opaque,
                                           onTap: () {
                                             HapticFeedback.lightImpact();
-                                            ItemBottomSheet.show(context, initialItem: item);
+                                            final now = DateTime.now();
+                                            final prefilledTime = DateTime(
+                                              dayDate.year,
+                                              dayDate.month,
+                                              dayDate.day,
+                                              now.hour,
+                                              now.minute,
+                                            );
+                                            ItemBottomSheet.show(
+                                              context,
+                                              prefilledStart: prefilledTime,
+                                            );
                                           },
-                                          child: Container(
-                                            padding: const EdgeInsets.all(6.0),
-                                            decoration: BoxDecoration(
-                                              border: Border.all(color: theme.colorScheme.primary, width: 1.0),
-                                              borderRadius: BorderRadius.circular(4),
-                                              color: theme.scaffoldBackgroundColor,
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: theme.colorScheme.primary,
-                                                  offset: const Offset(2.0, 2.0),
-                                                  blurRadius: 0.0,
-                                                  spreadRadius: 0.0,
-                                                ),
-                                              ],
+                                          child: ListView.separated(
+                                            padding: const EdgeInsets.only(
+                                              left: 4.0,
+                                              right: 6.0, // 4.0 visual padding + 2.0 shadow offset
+                                              top: 4.0,
+                                              bottom: 120.0, // 120.0 to scroll past overlay trays
                                             ),
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  '${item.isComplete ? '☒ ' : ''}$shape${item.title}',
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.bold,
-                                                    decoration: item.isComplete ? TextDecoration.lineThrough : null,
-                                                    decorationThickness: item.isComplete ? 1.5 : null,
+                                            itemCount: dayItems.length,
+                                            separatorBuilder: (context, idx) => const SizedBox(height: 6),
+                                            itemBuilder: (context, idx) {
+                                              final item = dayItems[idx];
+                                              final shape = _getCategoryShape(item.category);
+
+                                              return InkWell(
+                                                onTap: () {
+                                                  HapticFeedback.lightImpact();
+                                                  ItemBottomSheet.show(context, initialItem: item);
+                                                },
+                                                onDoubleTap: () async {
+                                                  HapticFeedback.lightImpact();
+                                                  final updated = item.copyWith(
+                                                    isComplete: !item.isComplete,
+                                                    completedAt: !item.isComplete
+                                                        ? DateTime.now()
+                                                        : null,
+                                                  );
+                                                  await repo.updateItem(updated);
+                                                  ref.read(googleCalendarServiceProvider).sync();
+                                                },
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(6.0),
+                                                  decoration: BoxDecoration(
+                                                    border: Border.all(color: theme.colorScheme.primary, width: 1.0),
+                                                    borderRadius: BorderRadius.circular(4),
+                                                    color: theme.scaffoldBackgroundColor,
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: theme.colorScheme.primary,
+                                                        offset: const Offset(2.0, 2.0),
+                                                        blurRadius: 0.0,
+                                                        spreadRadius: 0.0,
+                                                      ),
+                                                    ],
                                                   ),
-                                                  maxLines: 4,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  _formatItemTime(item),
-                                                  style: TextStyle(
-                                                    fontSize: 10,
-                                                    color: theme.colorScheme.primary.withValues(alpha: 0.85),
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        '${item.isComplete ? '☒ ' : ''}$shape${item.title}',
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          fontWeight: FontWeight.bold,
+                                                          decoration: item.isComplete ? TextDecoration.lineThrough : null,
+                                                          decorationThickness: item.isComplete ? 1.5 : null,
+                                                        ),
+                                                        maxLines: 4,
+                                                        overflow: TextOverflow.ellipsis,
+                                                      ),
+                                                      const SizedBox(height: 2),
+                                                      Text(
+                                                        _formatItemTime(item),
+                                                        style: TextStyle(
+                                                          fontSize: 10,
+                                                          color: theme.colorScheme.primary.withValues(alpha: 0.85),
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ),
-                                              ],
-                                            ),
+                                              );
+                                            },
                                           ),
-                                        );
-                                      },
-                                    ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                              ],
-                            ),
-                          ],
+                                ],
+                              ),
+                            );
+                          },
                         ),
                       );
                     }),

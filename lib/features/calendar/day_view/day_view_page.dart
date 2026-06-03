@@ -1036,6 +1036,19 @@ class _DayViewPageState extends ConsumerState<DayViewPage> {
                                                   context,
                                                   initialItem: pi.item,
                                                 ),
+                                                onDoubleTap: () async {
+                                                  HapticFeedback.lightImpact();
+                                                  final updated = pi.item.copyWith(
+                                                    isComplete: !pi.item.isComplete,
+                                                    completedAt: !pi.item.isComplete
+                                                        ? DateTime.now()
+                                                        : null,
+                                                  );
+                                                  await repo.updateItem(updated);
+                                                  ref
+                                                      .read(googleCalendarServiceProvider)
+                                                      .sync();
+                                                },
                                                 onComplete: () async {
                                                   final updated = pi.item.copyWith(
                                                     isComplete: !pi.item.isComplete,
